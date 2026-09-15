@@ -24,4 +24,9 @@ nonisolated enum MetronomeTiming {
         precondition(beatIndex >= 0)
         return beatIndex.isMultiple(of: timeSignature.numerator)
     }
+
+    static func nextBeatIndex(after beatIndex: Int, timeSignature: TimeSignature) -> Int {
+        precondition(beatIndex >= 0)
+        return (beatIndex + 1) % timeSignature.numerator
+    }
 }

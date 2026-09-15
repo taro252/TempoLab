@@ -15,8 +15,8 @@ nonisolated struct ClickSoundGenerator {
         timeSignature: TimeSignature,
         format: AVAudioFormat
     ) throws -> AVAudioPCMBuffer {
-        let normalClick = try makeClickBuffer(frequency: normalFrequency, amplitude: 0.65, format: format)
-        let accentClick = try makeClickBuffer(frequency: accentFrequency, amplitude: 0.9, format: format)
+        let normalClick = try makeClickBuffer(isAccent: false, format: format)
+        let accentClick = try makeClickBuffer(isAccent: true, format: format)
         let measureFrameCount = MetronomeTiming.framesPerMeasure(
             bpm: bpm,
             sampleRate: format.sampleRate,
@@ -54,11 +54,9 @@ nonisolated struct ClickSoundGenerator {
         return measureBuffer
     }
 
-    private func makeClickBuffer(
-        frequency: Double,
-        amplitude: Float,
-        format: AVAudioFormat
-    ) throws -> AVAudioPCMBuffer {
+    func makeClickBuffer(isAccent: Bool, format: AVAudioFormat) throws -> AVAudioPCMBuffer {
+        let frequency = isAccent ? accentFrequency : normalFrequency
+        let amplitude: Float = isAccent ? 0.9 : 0.65
         let frameCount = AVAudioFrameCount((format.sampleRate * clickDuration).rounded())
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount),
               let samples = buffer.floatChannelData?[0] else {

@@ -15,21 +15,15 @@ final class MetronomeViewModel: ObservableObject {
     }
 
     private var tapTempoCalculator = TapTempoCalculator(bpmRange: bpmRange)
-    private let metronomeEngine: MetronomeEngine
+    private let metronomeEngine: any MetronomeEngineProtocol
     private var playbackRequestID = 0
 
-    init(metronomeEngine: MetronomeEngine = MetronomeEngine()) {
+    init(metronomeEngine: any MetronomeEngineProtocol = MetronomeEngine()) {
         self.metronomeEngine = metronomeEngine
     }
 
-    func setBPM(_ value: Double) {
-        bpm = clampedBPM(Int(value.rounded()))
-        updateEngineIfRunning()
-    }
-
     func adjustBPM(by amount: Int) {
-        bpm = clampedBPM(bpm + amount)
-        updateEngineIfRunning()
+        setBPM(bpm + amount)
     }
 
     func toggleRunning() {
@@ -55,8 +49,7 @@ final class MetronomeViewModel: ObservableObject {
 
     func registerTap(at time: TimeInterval = ProcessInfo.processInfo.systemUptime) {
         if let calculatedBPM = tapTempoCalculator.registerTap(at: time) {
-            bpm = calculatedBPM
-            updateEngineIfRunning()
+            setBPM(calculatedBPM)
         }
     }
 
@@ -66,6 +59,13 @@ final class MetronomeViewModel: ObservableObject {
 
     private func clampedBPM(_ value: Int) -> Int {
         min(max(value, Self.bpmRange.lowerBound), Self.bpmRange.upperBound)
+    }
+
+    func setBPM(_ value: Int) {
+        let clampedValue = clampedBPM(value)
+        guard bpm != clampedValue else { return }
+        bpm = clampedValue
+        updateEngineIfRunning()
     }
 
     private func updateEngineIfRunning() {

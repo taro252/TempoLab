@@ -36,4 +36,25 @@ final class MetronomeTimingTests: XCTestCase {
         XCTAssertTrue(MetronomeTiming.isAccent(beatIndex: 4, timeSignature: .fourFour))
         XCTAssertTrue(MetronomeTiming.isAccent(beatIndex: 6, timeSignature: .sixEight))
     }
+
+    func testTempoChangeAfterBeatThreeInFourFourContinuesWithBeatFour() {
+        let nextBeat = MetronomeTiming.nextBeatIndex(after: 2, timeSignature: .fourFour)
+
+        XCTAssertEqual(nextBeat, 3)
+        XCTAssertFalse(MetronomeTiming.isAccent(beatIndex: nextBeat, timeSignature: .fourFour))
+    }
+
+    func testTempoChangeAfterBeatFourInFourFourContinuesWithAccentBeatOne() {
+        let nextBeat = MetronomeTiming.nextBeatIndex(after: 3, timeSignature: .fourFour)
+
+        XCTAssertEqual(nextBeat, 0)
+        XCTAssertTrue(MetronomeTiming.isAccent(beatIndex: nextBeat, timeSignature: .fourFour))
+    }
+
+    func testTempoChangeAfterBeatOneInThreeFourContinuesWithBeatTwo() {
+        let nextBeat = MetronomeTiming.nextBeatIndex(after: 0, timeSignature: .threeFour)
+
+        XCTAssertEqual(nextBeat, 1)
+        XCTAssertFalse(MetronomeTiming.isAccent(beatIndex: nextBeat, timeSignature: .threeFour))
+    }
 }

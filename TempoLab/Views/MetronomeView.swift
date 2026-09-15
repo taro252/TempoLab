@@ -2,6 +2,11 @@ import SwiftUI
 
 struct MetronomeView: View {
     @StateObject private var viewModel = MetronomeViewModel()
+    @State private var dragBPM: Int?
+
+    private var displayedBPM: Int {
+        dragBPM ?? viewModel.bpm
+    }
 
     var body: some View {
         ScrollView {
@@ -41,10 +46,9 @@ struct MetronomeView: View {
 
     private var bpmDisplay: some View {
         VStack(spacing: 0) {
-            Text(viewModel.bpm, format: .number)
+            Text(displayedBPM, format: .number)
                 .font(.system(size: 72, weight: .bold, design: .rounded))
                 .monospacedDigit()
-                .contentTransition(.numericText())
             Text("BPM")
                 .font(.headline)
                 .foregroundStyle(.secondary)
@@ -53,19 +57,26 @@ struct MetronomeView: View {
     }
 
     private var bpmSlider: some View {
-        Slider(
-            value: Binding(
-                get: { Double(viewModel.bpm) },
-                set: viewModel.setBPM
-            ),
-            in: Double(MetronomeViewModel.bpmRange.lowerBound)...Double(MetronomeViewModel.bpmRange.upperBound),
-            step: 1
-        ) {
-            Text("BPM")
-        } minimumValueLabel: {
-            Text("30")
-        } maximumValueLabel: {
-            Text("300")
+        VStack(spacing: 4) {
+            BPMDragSlider(
+                value: displayedBPM,
+                range: MetronomeViewModel.bpmRange,
+                onChanged: { value in
+                    dragBPM = value
+                },
+                onEnded: { finalValue in
+                    viewModel.setBPM(finalValue)
+                    dragBPM = nil
+                }
+            )
+
+            HStack {
+                Text("30")
+                Spacer()
+                Text("300")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 
