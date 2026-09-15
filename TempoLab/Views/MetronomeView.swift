@@ -2,11 +2,6 @@ import SwiftUI
 
 struct MetronomeView: View {
     @StateObject private var viewModel = MetronomeViewModel()
-    @State private var dragBPM: Int?
-
-    private var displayedBPM: Int {
-        dragBPM ?? viewModel.bpm
-    }
 
     var body: some View {
         ScrollView {
@@ -14,8 +9,11 @@ struct MetronomeView: View {
                 Text("TempoLab")
                     .font(.title.bold())
 
-                bpmDisplay
-                bpmSlider
+                BPMControlView(
+                    bpm: viewModel.bpm,
+                    range: MetronomeViewModel.bpmRange,
+                    onCommit: viewModel.setBPM
+                )
                 bpmAdjustmentButtons
                 timeSignaturePicker
                 playbackButton
@@ -41,42 +39,6 @@ struct MetronomeView: View {
             }
         } message: {
             Text(viewModel.audioErrorMessage ?? "不明なエラーが発生しました。")
-        }
-    }
-
-    private var bpmDisplay: some View {
-        VStack(spacing: 0) {
-            Text(displayedBPM, format: .number)
-                .font(.system(size: 72, weight: .bold, design: .rounded))
-                .monospacedDigit()
-            Text("BPM")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private var bpmSlider: some View {
-        VStack(spacing: 4) {
-            BPMDragSlider(
-                value: displayedBPM,
-                range: MetronomeViewModel.bpmRange,
-                onChanged: { value in
-                    dragBPM = value
-                },
-                onEnded: { finalValue in
-                    viewModel.setBPM(finalValue)
-                    dragBPM = nil
-                }
-            )
-
-            HStack {
-                Text("30")
-                Spacer()
-                Text("300")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
     }
 
