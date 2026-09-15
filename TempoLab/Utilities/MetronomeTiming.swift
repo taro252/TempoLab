@@ -1,0 +1,27 @@
+import Foundation
+
+nonisolated enum MetronomeTiming {
+    static func samplesPerBeat(bpm: Int, sampleRate: Double) -> Double {
+        precondition(bpm > 0)
+        precondition(sampleRate > 0)
+        return sampleRate * 60.0 / Double(bpm)
+    }
+
+    static func samplePosition(forBeat beatIndex: Int, bpm: Int, sampleRate: Double) -> Int64 {
+        precondition(beatIndex >= 0)
+        return Int64((Double(beatIndex) * samplesPerBeat(bpm: bpm, sampleRate: sampleRate)).rounded())
+    }
+
+    static func framesPerMeasure(bpm: Int, sampleRate: Double, timeSignature: TimeSignature) -> Int64 {
+        samplePosition(
+            forBeat: timeSignature.numerator,
+            bpm: bpm,
+            sampleRate: sampleRate
+        )
+    }
+
+    static func isAccent(beatIndex: Int, timeSignature: TimeSignature) -> Bool {
+        precondition(beatIndex >= 0)
+        return beatIndex.isMultiple(of: timeSignature.numerator)
+    }
+}

@@ -20,6 +20,23 @@ struct MetronomeView: View {
             .frame(maxWidth: 560)
             .frame(maxWidth: .infinity)
         }
+        .alert(
+            "オーディオエラー",
+            isPresented: Binding(
+                get: { viewModel.audioErrorMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        viewModel.dismissAudioError()
+                    }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                viewModel.dismissAudioError()
+            }
+        } message: {
+            Text(viewModel.audioErrorMessage ?? "不明なエラーが発生しました。")
+        }
     }
 
     private var bpmDisplay: some View {
