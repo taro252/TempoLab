@@ -195,8 +195,8 @@ struct BPMControlView: View {
 
                 Capsule()
                     .fill(Color.accentColor)
-                    .frame(width: 4, height: 42)
-                    .position(x: centerX, y: 42)
+                    .frame(width: 2, height: 42)
+                    .position(x: centerX, y: 44)
 
                 Image(systemName: "triangle.fill")
                     .font(.system(size: 11))
