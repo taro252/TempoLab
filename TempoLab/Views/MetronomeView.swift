@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MetronomeView: View {
     @StateObject private var viewModel = MetronomeViewModel()
+    @State private var bpmAnimationRequest: BPMAnimationRequest?
 
     var body: some View {
         ScrollView {
@@ -12,6 +13,7 @@ struct MetronomeView: View {
                 BPMControlView(
                     bpm: viewModel.bpm,
                     range: MetronomeViewModel.bpmRange,
+                    animationRequest: bpmAnimationRequest,
                     onCommit: viewModel.setBPM
                 )
                 bpmAdjustmentButtons
@@ -53,12 +55,25 @@ struct MetronomeView: View {
 
     private func bpmAdjustmentButton(title: String, amount: Int) -> some View {
         Button(title) {
-            viewModel.adjustBPM(by: amount)
+            adjustBPM(by: amount)
         }
         .buttonStyle(.bordered)
         .controlSize(.large)
         .frame(maxWidth: .infinity)
         .accessibilityLabel("BPMを\(abs(amount))\(amount < 0 ? "下げる" : "上げる")")
+    }
+
+    private func adjustBPM(by amount: Int) {
+        let previousBPM = viewModel.bpm
+        viewModel.adjustBPM(by: amount)
+        let newBPM = viewModel.bpm
+
+        guard previousBPM != newBPM else { return }
+        bpmAnimationRequest = BPMAnimationRequest(
+            id: (bpmAnimationRequest?.id ?? 0) + 1,
+            fromBPM: previousBPM,
+            toBPM: newBPM
+        )
     }
 
     private var timeSignaturePicker: some View {
