@@ -3,6 +3,7 @@ import SwiftUI
 struct MetronomeView: View {
     @StateObject private var viewModel = MetronomeViewModel()
     @State private var bpmAnimationRequest: BPMAnimationRequest?
+    @State private var isShowingClickSettings = false
 
     var body: some View {
         ScrollView {
@@ -18,6 +19,7 @@ struct MetronomeView: View {
                 )
                 bpmAdjustmentButtons
                 timeSignaturePicker
+                clickSoundButton
                 playbackButton
                 tapTempoButton
             }
@@ -41,6 +43,9 @@ struct MetronomeView: View {
             }
         } message: {
             Text(viewModel.audioErrorMessage ?? "不明なエラーが発生しました。")
+        }
+        .sheet(isPresented: $isShowingClickSettings) {
+            ClickSoundSettingsView(viewModel: viewModel)
         }
     }
 
@@ -98,6 +103,17 @@ struct MetronomeView: View {
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
         .tint(viewModel.isRunning ? .red : .accentColor)
+        .frame(maxWidth: .infinity)
+    }
+
+    private var clickSoundButton: some View {
+        Button {
+            isShowingClickSettings = true
+        } label: {
+            Label("設定", systemImage: "gearshape")
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
         .frame(maxWidth: .infinity)
     }
 

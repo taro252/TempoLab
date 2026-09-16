@@ -21,9 +21,22 @@
 		B1000001305905780006511B /* TempoLabTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TempoLabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B2000001305905780006511B /* Exceptions for "TempoLab" folder in "TempoLab" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A204CA0E305905780006511B /* TempoLab */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A204CA11305905780006511B /* TempoLab */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B2000001305905780006511B /* Exceptions for "TempoLab" folder in "TempoLab" target */,
+			);
 			path = TempoLab;
 			sourceTree = "<group>";
 		};
@@ -130,6 +143,11 @@
 				TargetAttributes = {
 					A204CA0E305905780006511B = {
 						CreatedOnToolsVersion = 26.6;
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+						};
 					};
 					B1000004305905780006511B = {
 						CreatedOnToolsVersion = 26.6;
@@ -326,6 +344,8 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				"INFOPLIST_FILE[sdk=iphoneos*]" = TempoLab/Info.plist;
+				"INFOPLIST_FILE[sdk=iphonesimulator*]" = TempoLab/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -369,6 +389,8 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				"INFOPLIST_FILE[sdk=iphoneos*]" = TempoLab/Info.plist;
+				"INFOPLIST_FILE[sdk=iphonesimulator*]" = TempoLab/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

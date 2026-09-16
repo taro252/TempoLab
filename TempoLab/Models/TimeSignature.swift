@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated struct TimeSignature: Hashable, Identifiable, Sendable {
+nonisolated struct TimeSignature: Codable, Hashable, Identifiable, Sendable {
     let numerator: Int
     let denominator: Int
 

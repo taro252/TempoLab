@@ -5,7 +5,7 @@ import XCTest
 final class MetronomeViewModelTests: XCTestCase {
     func testSetBPMCommitsSliderResultOnce() {
         let engine = MetronomeEngineSpy()
-        let viewModel = MetronomeViewModel(metronomeEngine: engine)
+        let viewModel = makeViewModel(engine: engine)
 
         viewModel.toggleRunning()
 
@@ -20,7 +20,7 @@ final class MetronomeViewModelTests: XCTestCase {
 
     func testSetBPMDoesNotUpdateEngineWhenFinalValueIsUnchanged() {
         let engine = MetronomeEngineSpy()
-        let viewModel = MetronomeViewModel(metronomeEngine: engine)
+        let viewModel = makeViewModel(engine: engine)
 
         viewModel.toggleRunning()
         viewModel.setBPM(120)
@@ -30,7 +30,7 @@ final class MetronomeViewModelTests: XCTestCase {
 
     func testBPMButtonUpdatesEngineImmediately() {
         let engine = MetronomeEngineSpy()
-        let viewModel = MetronomeViewModel(metronomeEngine: engine)
+        let viewModel = makeViewModel(engine: engine)
 
         viewModel.toggleRunning()
         viewModel.adjustBPM(by: 1)
@@ -41,7 +41,7 @@ final class MetronomeViewModelTests: XCTestCase {
 
     func testBPMPlusFiveButtonUpdatesEngineImmediately() {
         let engine = MetronomeEngineSpy()
-        let viewModel = MetronomeViewModel(metronomeEngine: engine)
+        let viewModel = makeViewModel(engine: engine)
 
         viewModel.toggleRunning()
         viewModel.adjustBPM(by: 5)
@@ -52,7 +52,7 @@ final class MetronomeViewModelTests: XCTestCase {
 
     func testBPMButtonsUpdateTheSingleBPMState() {
         let engine = MetronomeEngineSpy()
-        let viewModel = MetronomeViewModel(metronomeEngine: engine)
+        let viewModel = makeViewModel(engine: engine)
 
         viewModel.adjustBPM(by: 1)
         XCTAssertEqual(viewModel.bpm, 121)
@@ -63,7 +63,7 @@ final class MetronomeViewModelTests: XCTestCase {
 
     func testBPMAdjustmentsAreClampedToBounds() {
         let engine = MetronomeEngineSpy()
-        let viewModel = MetronomeViewModel(metronomeEngine: engine)
+        let viewModel = makeViewModel(engine: engine)
 
         viewModel.setBPM(299)
         viewModel.adjustBPM(by: 5)
@@ -76,7 +76,7 @@ final class MetronomeViewModelTests: XCTestCase {
 
     func testButtonUsesBPMCommittedBySlider() {
         let engine = MetronomeEngineSpy()
-        let viewModel = MetronomeViewModel(metronomeEngine: engine)
+        let viewModel = makeViewModel(engine: engine)
 
         viewModel.setBPM(150)
         viewModel.adjustBPM(by: 1)
@@ -86,7 +86,7 @@ final class MetronomeViewModelTests: XCTestCase {
 
     func testTapTempoUpdatesEngineWhenTempoIsCalculated() {
         let engine = MetronomeEngineSpy()
-        let viewModel = MetronomeViewModel(metronomeEngine: engine)
+        let viewModel = makeViewModel(engine: engine)
 
         viewModel.toggleRunning()
         viewModel.registerTap(at: 0)
@@ -98,7 +98,7 @@ final class MetronomeViewModelTests: XCTestCase {
 
     func testSliderTempoIsUsedWhenStartingAfterEditing() {
         let engine = MetronomeEngineSpy()
-        let viewModel = MetronomeViewModel(metronomeEngine: engine)
+        let viewModel = makeViewModel(engine: engine)
 
         viewModel.setBPM(180)
         viewModel.toggleRunning()
@@ -106,20 +106,130 @@ final class MetronomeViewModelTests: XCTestCase {
         XCTAssertTrue(engine.updates.isEmpty)
         XCTAssertEqual(engine.starts.map(\.bpm), [180])
     }
+
+    func testClickSettingsAreClampedAndUpdateRunningEngine() {
+        let engine = MetronomeEngineSpy()
+        let viewModel = makeViewModel(engine: engine)
+
+        viewModel.toggleRunning()
+        viewModel.setNormalFrequency(100)
+        viewModel.setAccentFrequency(4_000)
+        viewModel.setClickVolume(2)
+        viewModel.setClickSoundType(.wood)
+
+        XCTAssertEqual(viewModel.clickSoundSettings.normalFrequency, 300)
+        XCTAssertEqual(viewModel.clickSoundSettings.accentFrequency, 3_000)
+        XCTAssertEqual(viewModel.clickSoundSettings.volume, 1)
+        XCTAssertEqual(viewModel.clickSoundSettings.soundType, .wood)
+        XCTAssertEqual(engine.clickSettingsUpdates.count, 4)
+        XCTAssertEqual(engine.clickSettingsUpdates.last, viewModel.clickSoundSettings)
+    }
+
+    func testClickSettingsArePassedWhenStarting() {
+        let engine = MetronomeEngineSpy()
+        let viewModel = makeViewModel(engine: engine)
+
+        viewModel.setNormalFrequency(500)
+        viewModel.setAccentFrequency(2_000)
+        viewModel.setClickVolume(0.5)
+        viewModel.setClickSoundType(.digital)
+        viewModel.toggleRunning()
+
+        XCTAssertEqual(engine.starts.last?.clickSettings, viewModel.clickSoundSettings)
+    }
+
+    func testRunningStateIsNotRestored() {
+        let store = InMemorySettingsStore(
+            settings: AppSettings(bpm: 150, keepScreenAwake: true)
+        )
+        let firstViewModel = MetronomeViewModel(
+            metronomeEngine: MetronomeEngineSpy(),
+            settingsStore: store,
+            screenAwakeController: ScreenAwakeControllerSpy()
+        )
+        firstViewModel.toggleRunning()
+        XCTAssertTrue(firstViewModel.isRunning)
+
+        let restoredViewModel = MetronomeViewModel(
+            metronomeEngine: MetronomeEngineSpy(),
+            settingsStore: store,
+            screenAwakeController: ScreenAwakeControllerSpy()
+        )
+
+        XCTAssertEqual(restoredViewModel.bpm, 150)
+        XCTAssertFalse(restoredViewModel.isRunning)
+    }
+
+    func testScreenAwakeControllerFollowsSettingAndPlayback() {
+        let controller = ScreenAwakeControllerSpy()
+        let viewModel = MetronomeViewModel(
+            metronomeEngine: MetronomeEngineSpy(),
+            settingsStore: InMemorySettingsStore(),
+            screenAwakeController: controller
+        )
+
+        viewModel.setKeepScreenAwake(true)
+        XCTAssertEqual(controller.values.last, false)
+
+        viewModel.toggleRunning()
+        XCTAssertEqual(controller.values.last, true)
+
+        viewModel.toggleRunning()
+        XCTAssertEqual(controller.values.last, false)
+    }
+
+    private func makeViewModel(engine: MetronomeEngineSpy) -> MetronomeViewModel {
+        MetronomeViewModel(
+            metronomeEngine: engine,
+            settingsStore: InMemorySettingsStore(),
+            screenAwakeController: ScreenAwakeControllerSpy()
+        )
+    }
+}
+
+nonisolated private final class InMemorySettingsStore: SettingsStoring, @unchecked Sendable {
+    private var settings: AppSettings
+
+    init(settings: AppSettings = .default) {
+        self.settings = settings
+    }
+
+    func load() -> AppSettings {
+        settings
+    }
+
+    func save(_ settings: AppSettings) {
+        self.settings = settings
+    }
+}
+
+@MainActor
+private final class ScreenAwakeControllerSpy: ScreenAwakeControlling {
+    private(set) var values: [Bool] = []
+
+    func setPreventSleep(_ shouldPreventSleep: Bool) {
+        values.append(shouldPreventSleep)
+    }
 }
 
 nonisolated private final class MetronomeEngineSpy: MetronomeEngineProtocol, @unchecked Sendable {
-    typealias Request = (bpm: Int, timeSignature: TimeSignature)
+    typealias Request = (
+        bpm: Int,
+        timeSignature: TimeSignature,
+        clickSettings: ClickSoundSettings
+    )
 
     private(set) var starts: [Request] = []
     private(set) var updates: [Request] = []
+    private(set) var clickSettingsUpdates: [ClickSoundSettings] = []
 
     func start(
         bpm: Int,
         timeSignature: TimeSignature,
+        clickSettings: ClickSoundSettings,
         completion: @escaping MetronomeEngine.StartHandler
     ) {
-        starts.append((bpm, timeSignature))
+        starts.append((bpm, timeSignature, clickSettings))
     }
 
     func stop() {}
@@ -129,6 +239,19 @@ nonisolated private final class MetronomeEngineSpy: MetronomeEngineProtocol, @un
         timeSignature: TimeSignature,
         onFailure: @escaping MetronomeEngine.FailureHandler
     ) {
-        updates.append((bpm, timeSignature))
+        updates.append((bpm, timeSignature, .default))
     }
+
+    func updateClickSettings(
+        _ settings: ClickSoundSettings,
+        onFailure: @escaping MetronomeEngine.FailureHandler
+    ) {
+        clickSettingsUpdates.append(settings)
+    }
+
+    func previewClick(
+        isAccent: Bool,
+        settings: ClickSoundSettings,
+        completion: @escaping MetronomeEngine.StartHandler
+    ) {}
 }
