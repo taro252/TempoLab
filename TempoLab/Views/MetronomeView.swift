@@ -97,13 +97,15 @@ struct MetronomeView: View {
     }
 
     private var playbackButton: some View {
-        Button(viewModel.isRunning ? "Stop" : "Start") {
+        ImmediateButton(
+            tint: viewModel.isRunning ? .red : .accentColor,
+            isProminent: true
+        ) {
             viewModel.toggleRunning()
+        } label: {
+            Text(viewModel.isRunning ? "Stop" : "Start")
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .tint(viewModel.isRunning ? .red : .accentColor)
-        .frame(maxWidth: .infinity)
+        .accessibilityLabel(viewModel.isRunning ? "Stop" : "Start")
     }
 
     private var clickSoundButton: some View {
@@ -118,13 +120,15 @@ struct MetronomeView: View {
     }
 
     private var tapTempoButton: some View {
-        Button("Tap Tempo") {
-            viewModel.registerTap()
+        ImmediateButton(
+            keyboardShortcut: KeyboardShortcut(.space, modifiers: [])
+        ) {
+            let touchDownTime = ProcessInfo.processInfo.systemUptime
+            viewModel.registerTap(at: touchDownTime)
+        } label: {
+            Text("Tap Tempo")
         }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .frame(maxWidth: .infinity)
-        .keyboardShortcut(.space, modifiers: [])
+        .accessibilityLabel("Tap Tempo")
     }
 }
 
