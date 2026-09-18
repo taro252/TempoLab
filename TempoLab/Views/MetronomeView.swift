@@ -4,6 +4,7 @@ struct MetronomeView: View {
     @StateObject private var viewModel = MetronomeViewModel()
     @State private var bpmAnimationRequest: BPMAnimationRequest?
     @State private var isShowingClickSettings = false
+    @State private var isShowingPatternEditor = false
 
     var body: some View {
         ScrollView {
@@ -19,6 +20,8 @@ struct MetronomeView: View {
                 )
                 bpmAdjustmentButtons
                 timeSignaturePicker
+                subdivisionPicker
+                accentPatternButton
                 clickSoundButton
                 playbackButton
                 tapTempoButton
@@ -46,6 +49,9 @@ struct MetronomeView: View {
         }
         .sheet(isPresented: $isShowingClickSettings) {
             ClickSoundSettingsView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $isShowingPatternEditor) {
+            AccentPatternEditorView(viewModel: viewModel)
         }
     }
 
@@ -106,6 +112,40 @@ struct MetronomeView: View {
             Text(viewModel.isRunning ? "Stop" : "Start")
         }
         .accessibilityLabel(viewModel.isRunning ? "Stop" : "Start")
+    }
+
+    private var subdivisionPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("音符単位")
+                .font(.headline)
+
+            Picker(
+                "音符単位",
+                selection: Binding(
+                    get: { viewModel.selectedSubdivision },
+                    set: viewModel.setSubdivision
+                )
+            ) {
+                ForEach(Subdivision.allCases) { subdivision in
+                    Text("\(subdivision.symbol) \(subdivision.displayName)")
+                        .tag(subdivision)
+                        .accessibilityLabel(subdivision.accessibilityLabel)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        }
+    }
+
+    private var accentPatternButton: some View {
+        Button {
+            isShowingPatternEditor = true
+        } label: {
+            Label("アクセントパターン", systemImage: "circle.grid.3x3")
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .frame(maxWidth: .infinity)
     }
 
     private var clickSoundButton: some View {

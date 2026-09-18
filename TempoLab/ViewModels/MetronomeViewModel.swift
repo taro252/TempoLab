@@ -10,6 +10,8 @@ final class MetronomeViewModel: ObservableObject {
     @Published private(set) var audioErrorMessage: String?
     @Published private(set) var clickSoundSettings: ClickSoundSettings
     @Published private(set) var keepScreenAwake: Bool
+    @Published private(set) var selectedSubdivision: Subdivision
+    @Published private(set) var accentPatterns: AccentPatternLibrary
     @Published var selectedTimeSignature: TimeSignature {
         didSet {
             guard selectedTimeSignature != oldValue else { return }
@@ -24,6 +26,13 @@ final class MetronomeViewModel: ObservableObject {
     private let screenAwakeController: any ScreenAwakeControlling
     private var playbackRequestID = 0
 
+    var currentAccentPattern: AccentPattern {
+        accentPatterns.pattern(
+            for: selectedTimeSignature,
+            subdivision: selectedSubdivision
+        )
+    }
+
     init(
         metronomeEngine: any MetronomeEngineProtocol = MetronomeEngine(),
         settingsStore: any SettingsStoring = SettingsStore(),
@@ -37,6 +46,8 @@ final class MetronomeViewModel: ObservableObject {
         selectedTimeSignature = settings.timeSignature
         clickSoundSettings = settings.clickSoundSettings
         keepScreenAwake = settings.keepScreenAwake
+        selectedSubdivision = settings.subdivision
+        accentPatterns = settings.accentPatterns
         self.screenAwakeController.setPreventSleep(false)
     }
 
@@ -59,6 +70,8 @@ final class MetronomeViewModel: ObservableObject {
         metronomeEngine.start(
             bpm: bpm,
             timeSignature: selectedTimeSignature,
+            subdivision: selectedSubdivision,
+            accentPattern: currentAccentPattern,
             clickSettings: clickSoundSettings
         ) { [weak self] result in
             guard let self, playbackRequestID == requestID else { return }
@@ -102,6 +115,22 @@ final class MetronomeViewModel: ObservableObject {
         updateScreenAwakeState()
     }
 
+    func setSubdivision(_ subdivision: Subdivision) {
+        guard selectedSubdivision != subdivision else { return }
+        selectedSubdivision = subdivision
+        persistSettings()
+        updateEngineIfRunning()
+    }
+
+    func cyclePatternStep(at index: Int) {
+        var pattern = currentAccentPattern
+        guard pattern.steps.indices.contains(index) else { return }
+        pattern.cycleStep(at: index)
+        accentPatterns.setPattern(pattern)
+        persistSettings()
+        updateEngineIfRunning()
+    }
+
     func previewNormalClick() {
         previewClick(isAccent: false)
     }
@@ -126,7 +155,12 @@ final class MetronomeViewModel: ObservableObject {
         guard isRunning else { return }
         let requestID = playbackRequestID
 
-        metronomeEngine.update(bpm: bpm, timeSignature: selectedTimeSignature) { [weak self] error in
+        metronomeEngine.update(
+            bpm: bpm,
+            timeSignature: selectedTimeSignature,
+            subdivision: selectedSubdivision,
+            accentPattern: currentAccentPattern
+        ) { [weak self] error in
             guard let self, playbackRequestID == requestID else { return }
             setRunning(false)
             audioErrorMessage = error.localizedDescription
@@ -181,6 +215,8 @@ final class MetronomeViewModel: ObservableObject {
             AppSettings(
                 bpm: bpm,
                 timeSignature: selectedTimeSignature,
+                subdivision: selectedSubdivision,
+                accentPatterns: accentPatterns,
                 clickSoundSettings: clickSoundSettings,
                 keepScreenAwake: keepScreenAwake
             )

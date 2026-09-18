@@ -18,6 +18,61 @@ final class MetronomeTimingTests: XCTestCase {
         )
     }
 
+    func testSamplesPerSubdivisionAt120BPM() {
+        XCTAssertEqual(
+            MetronomeTiming.samplesPerSubdivision(
+                bpm: 120, sampleRate: 48_000, subdivision: .quarter
+            ),
+            24_000
+        )
+        XCTAssertEqual(
+            MetronomeTiming.samplesPerSubdivision(
+                bpm: 120, sampleRate: 48_000, subdivision: .eighth
+            ),
+            12_000
+        )
+        XCTAssertEqual(
+            MetronomeTiming.samplesPerSubdivision(
+                bpm: 120, sampleRate: 48_000, subdivision: .triplet
+            ),
+            8_000
+        )
+        XCTAssertEqual(
+            MetronomeTiming.samplesPerSubdivision(
+                bpm: 120, sampleRate: 48_000, subdivision: .sixteenth
+            ),
+            6_000
+        )
+    }
+
+    func testSixteenthSubdivisionAtMaximumTempoUsesTwentyStepsPerSecond() {
+        XCTAssertEqual(
+            MetronomeTiming.samplesPerSubdivision(
+                bpm: 300, sampleRate: 48_000, subdivision: .sixteenth
+            ),
+            2_400
+        )
+    }
+
+    func testLongTermSubdivisionPositionDoesNotAccumulateRoundedIntervalError() {
+        let index: Int64 = 100_000
+        let sampleRate = 44_100.0
+        let bpm = 137
+        let expected = Int64(
+            (Double(index) * sampleRate * 60 / Double(bpm) / 3).rounded()
+        )
+
+        XCTAssertEqual(
+            MetronomeTiming.samplePosition(
+                forSubdivision: index,
+                bpm: bpm,
+                sampleRate: sampleRate,
+                subdivision: .triplet
+            ),
+            expected
+        )
+    }
+
     func testMeasureFrameCountUsesTimeSignatureNumerator() {
         XCTAssertEqual(
             MetronomeTiming.framesPerMeasure(bpm: 120, sampleRate: 48_000, timeSignature: .fourFour),

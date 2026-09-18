@@ -6,12 +6,16 @@ nonisolated struct AppSettings: Codable, Equatable, Sendable {
 
     let bpm: Int
     let timeSignature: TimeSignature
+    let subdivision: Subdivision
+    let accentPatterns: AccentPatternLibrary
     let clickSoundSettings: ClickSoundSettings
     let keepScreenAwake: Bool
 
     init(
         bpm: Int = 120,
         timeSignature: TimeSignature = .fourFour,
+        subdivision: Subdivision = .quarter,
+        accentPatterns: AccentPatternLibrary = AccentPatternLibrary(),
         clickSoundSettings: ClickSoundSettings = .default,
         keepScreenAwake: Bool = false
     ) {
@@ -19,6 +23,8 @@ nonisolated struct AppSettings: Codable, Equatable, Sendable {
         self.timeSignature = TimeSignature.supported.contains(timeSignature)
             ? timeSignature
             : .fourFour
+        self.subdivision = subdivision
+        self.accentPatterns = accentPatterns.validated()
         self.clickSoundSettings = ClickSoundSettings(
             normalFrequency: clickSoundSettings.normalFrequency,
             accentFrequency: clickSoundSettings.accentFrequency,
@@ -31,6 +37,8 @@ nonisolated struct AppSettings: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case bpm
         case timeSignature
+        case subdivision
+        case accentPatterns
         case clickSoundSettings
         case keepScreenAwake
     }
@@ -43,6 +51,12 @@ nonisolated struct AppSettings: Codable, Equatable, Sendable {
         let decodedTimeSignature = (
             try? container.decode(TimeSignature.self, forKey: .timeSignature)
         ) ?? defaults.timeSignature
+        let decodedSubdivision = (
+            try? container.decode(Subdivision.self, forKey: .subdivision)
+        ) ?? defaults.subdivision
+        let decodedAccentPatterns = (
+            try? container.decode(AccentPatternLibrary.self, forKey: .accentPatterns)
+        ) ?? defaults.accentPatterns
         let decodedClickSettings = (
             try? container.decode(ClickSoundSettings.self, forKey: .clickSoundSettings)
         ) ?? defaults.clickSoundSettings
@@ -53,6 +67,8 @@ nonisolated struct AppSettings: Codable, Equatable, Sendable {
         self.init(
             bpm: decodedBPM,
             timeSignature: decodedTimeSignature,
+            subdivision: decodedSubdivision,
+            accentPatterns: decodedAccentPatterns,
             clickSoundSettings: decodedClickSettings,
             keepScreenAwake: decodedKeepScreenAwake
         )

@@ -23,6 +23,8 @@ final class SettingsStoreTests: XCTestCase {
         let settings = AppSettings(
             bpm: 150,
             timeSignature: .threeFour,
+            subdivision: .triplet,
+            accentPatterns: patternLibrary(),
             clickSoundSettings: ClickSoundSettings(
                 normalFrequency: 600,
                 accentFrequency: 1_600,
@@ -36,6 +38,10 @@ final class SettingsStoreTests: XCTestCase {
         let restored = SettingsStore(userDefaults: userDefaults).load()
 
         XCTAssertEqual(restored, settings)
+        XCTAssertEqual(
+            restored.accentPatterns.pattern(for: .threeFour, subdivision: .triplet).steps[1],
+            .mute
+        )
     }
 
     func testInvalidStoredValuesAreValidatedWhenLoaded() throws {
@@ -84,5 +90,56 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertFalse(
             ScreenAwakePolicy.shouldPreventSleep(keepScreenAwake: false, isRunning: true)
         )
+    }
+
+    func testInvalidStoredPatternFallsBackToDefault() throws {
+        let invalidJSON = """
+        {
+          "bpm": 120,
+          "timeSignature": { "numerator": 4, "denominator": 4 },
+          "subdivision": "sixteenth",
+          "accentPatterns": {
+            "patternsByKey": {
+              "4-4-sixteenth": {
+                "timeSignature": { "numerator": 4, "denominator": 4 },
+                "subdivision": "sixteenth",
+                "steps": ["accent"]
+              }
+            }
+          },
+          "clickSoundSettings": {
+            "normalFrequency": 800,
+            "accentFrequency": 1200,
+            "volume": 0.8,
+            "soundType": "sine"
+          },
+          "keepScreenAwake": false
+        }
+        """
+        userDefaults.set(
+            try XCTUnwrap(invalidJSON.data(using: .utf8)),
+            forKey: SettingsStore.storageKey
+        )
+
+        let restored = SettingsStore(userDefaults: userDefaults).load()
+        let pattern = restored.accentPatterns.pattern(
+            for: .fourFour,
+            subdivision: .sixteenth
+        )
+
+        XCTAssertEqual(pattern.steps.count, 16)
+        XCTAssertEqual(pattern.steps.first, .accent)
+        XCTAssertTrue(pattern.steps.dropFirst().allSatisfy { $0 == .normal })
+    }
+
+    private func patternLibrary() -> AccentPatternLibrary {
+        var library = AccentPatternLibrary()
+        var pattern = AccentPattern.defaultPattern(
+            timeSignature: .threeFour,
+            subdivision: .triplet
+        )
+        pattern.cycleStep(at: 1)
+        library.setPattern(pattern)
+        return library
     }
 }

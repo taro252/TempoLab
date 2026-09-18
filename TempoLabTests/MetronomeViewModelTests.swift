@@ -138,6 +138,19 @@ final class MetronomeViewModelTests: XCTestCase {
         XCTAssertEqual(engine.starts.last?.clickSettings, viewModel.clickSoundSettings)
     }
 
+    func testSubdivisionAndPatternArePassedToRunningEngine() {
+        let engine = MetronomeEngineSpy()
+        let viewModel = makeViewModel(engine: engine)
+
+        viewModel.setSubdivision(.sixteenth)
+        viewModel.toggleRunning()
+        viewModel.cyclePatternStep(at: 1)
+
+        XCTAssertEqual(engine.starts.last?.subdivision, .sixteenth)
+        XCTAssertEqual(engine.starts.last?.accentPattern.steps.count, 16)
+        XCTAssertEqual(engine.updates.last?.accentPattern.steps[1], .mute)
+    }
+
     func testRunningStateIsNotRestored() {
         let store = InMemorySettingsStore(
             settings: AppSettings(bpm: 150, keepScreenAwake: true)
@@ -216,6 +229,8 @@ nonisolated private final class MetronomeEngineSpy: MetronomeEngineProtocol, @un
     typealias Request = (
         bpm: Int,
         timeSignature: TimeSignature,
+        subdivision: Subdivision,
+        accentPattern: AccentPattern,
         clickSettings: ClickSoundSettings
     )
 
@@ -226,10 +241,12 @@ nonisolated private final class MetronomeEngineSpy: MetronomeEngineProtocol, @un
     func start(
         bpm: Int,
         timeSignature: TimeSignature,
+        subdivision: Subdivision,
+        accentPattern: AccentPattern,
         clickSettings: ClickSoundSettings,
         completion: @escaping MetronomeEngine.StartHandler
     ) {
-        starts.append((bpm, timeSignature, clickSettings))
+        starts.append((bpm, timeSignature, subdivision, accentPattern, clickSettings))
     }
 
     func stop() {}
@@ -237,9 +254,11 @@ nonisolated private final class MetronomeEngineSpy: MetronomeEngineProtocol, @un
     func update(
         bpm: Int,
         timeSignature: TimeSignature,
+        subdivision: Subdivision,
+        accentPattern: AccentPattern,
         onFailure: @escaping MetronomeEngine.FailureHandler
     ) {
-        updates.append((bpm, timeSignature, .default))
+        updates.append((bpm, timeSignature, subdivision, accentPattern, .default))
     }
 
     func updateClickSettings(

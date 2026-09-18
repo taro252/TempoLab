@@ -12,6 +12,30 @@ nonisolated enum MetronomeTiming {
         return Int64((Double(beatIndex) * samplesPerBeat(bpm: bpm, sampleRate: sampleRate)).rounded())
     }
 
+    static func samplesPerSubdivision(
+        bpm: Int,
+        sampleRate: Double,
+        subdivision: Subdivision
+    ) -> Double {
+        samplesPerBeat(bpm: bpm, sampleRate: sampleRate)
+            / Double(subdivision.divisionsPerBeat)
+    }
+
+    static func samplePosition(
+        forSubdivision subdivisionIndex: Int64,
+        bpm: Int,
+        sampleRate: Double,
+        subdivision: Subdivision
+    ) -> Int64 {
+        precondition(subdivisionIndex >= 0)
+        let exactPosition = Double(subdivisionIndex) * samplesPerSubdivision(
+            bpm: bpm,
+            sampleRate: sampleRate,
+            subdivision: subdivision
+        )
+        return Int64(exactPosition.rounded())
+    }
+
     static func framesPerMeasure(bpm: Int, sampleRate: Double, timeSignature: TimeSignature) -> Int64 {
         samplePosition(
             forBeat: timeSignature.numerator,
