@@ -21,18 +21,21 @@ struct ImmediateButton<Label: View>: View {
     private let tint: Color
     private let isProminent: Bool
     private let keyboardShortcut: KeyboardShortcut?
+    private let circularDiameter: CGFloat?
 
     @State private var pressState = ImmediatePressState()
 
     init(
         tint: Color = .accentColor,
         isProminent: Bool = false,
+        circularDiameter: CGFloat? = nil,
         keyboardShortcut: KeyboardShortcut? = nil,
         action: @escaping () -> Void,
         @ViewBuilder label: @escaping () -> Label
     ) {
         self.tint = tint
         self.isProminent = isProminent
+        self.circularDiameter = circularDiameter
         self.keyboardShortcut = keyboardShortcut
         self.action = action
         self.label = label
@@ -42,17 +45,31 @@ struct ImmediateButton<Label: View>: View {
         label()
             .font(.headline)
             .foregroundStyle(isProminent ? Color.white : tint)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .padding(.horizontal, circularDiameter == nil ? 16 : 8)
+            .padding(.vertical, circularDiameter == nil ? 10 : 6)
+            .frame(
+                maxWidth: circularDiameter == nil ? .infinity : nil,
+                minHeight: 44
+            )
+            .frame(width: circularDiameter, height: circularDiameter)
             .background {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isProminent ? tint : tint.opacity(0.1))
+                if circularDiameter == nil {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(isProminent ? tint : tint.opacity(0.1))
+                } else {
+                    Circle()
+                        .fill(isProminent ? tint : tint.opacity(0.1))
+                }
             }
             .overlay {
                 if !isProminent {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(tint.opacity(0.35), lineWidth: 1)
+                    if circularDiameter == nil {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(tint.opacity(0.35), lineWidth: 1)
+                    } else {
+                        Circle()
+                            .stroke(tint.opacity(0.35), lineWidth: 1)
+                    }
                 }
             }
             .scaleEffect(pressState.isActive ? 0.98 : 1)

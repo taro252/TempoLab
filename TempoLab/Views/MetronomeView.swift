@@ -7,29 +7,68 @@ struct MetronomeView: View {
     @State private var isShowingPatternEditor = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 28) {
-                Text("TempoLab")
-                    .font(.title.bold())
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color("AppBackgroundHighlight"),
+                    Color("AppBackground"),
+                    Color("AppBackground")
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
-                BPMControlView(
-                    bpm: viewModel.bpm,
-                    range: MetronomeViewModel.bpmRange,
-                    animationRequest: bpmAnimationRequest,
-                    onCommit: viewModel.setBPM
-                )
-                bpmAdjustmentButtons
-                timeSignaturePicker
-                subdivisionPicker
-                accentPatternButton
-                clickSoundButton
-                playbackButton
-                tapTempoButton
+            GeometryReader { geometry in
+                let compact = geometry.size.height < 680
+                let contentSpacing: CGFloat = compact ? 4 : 12
+
+                VStack(spacing: contentSpacing) {
+                    MetronomeTopBar {
+                        isShowingClickSettings = true
+                    }
+
+                    Spacer(minLength: compact ? 0 : 2)
+
+                    BPMDisplayView(bpm: viewModel.bpm, compact: compact)
+
+                    BPMControlView(
+                        bpm: viewModel.bpm,
+                        range: MetronomeViewModel.bpmRange,
+                        animationRequest: bpmAnimationRequest,
+                        compact: compact,
+                        onCommit: viewModel.setBPM
+                    )
+                    .padding(.horizontal, compact ? 0 : 8)
+
+                    bpmAdjustmentButtons(compact: compact)
+
+                    CompactMeterControls(
+                        timeSignature: viewModel.selectedTimeSignature,
+                        subdivision: viewModel.selectedSubdivision,
+                        onSelectTimeSignature: { viewModel.selectedTimeSignature = $0 },
+                        onSelectSubdivision: viewModel.setSubdivision,
+                        onOpenPattern: { isShowingPatternEditor = true }
+                    )
+
+                    Spacer(minLength: compact ? 0 : 4)
+
+                    MetronomeTransportControls(
+                        isRunning: viewModel.isRunning,
+                        buttonDiameter: compact ? 68 : 88,
+                        compact: compact,
+                        onTogglePlayback: viewModel.toggleRunning,
+                        onTapTempo: registerTap
+                    )
+                }
+                .padding(.horizontal, compact ? 14 : 20)
+                .padding(.vertical, compact ? 4 : 12)
+                .frame(maxWidth: 640, maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
             }
-            .padding()
-            .frame(maxWidth: 560)
-            .frame(maxWidth: .infinity)
         }
+        .tint(Color("AppAccent"))
+        .preferredColorScheme(.dark)
         .alert(
             "オーディオエラー",
             isPresented: Binding(
@@ -55,22 +94,28 @@ struct MetronomeView: View {
         }
     }
 
-    private var bpmAdjustmentButtons: some View {
-        HStack(spacing: 12) {
-            bpmAdjustmentButton(title: "−5", amount: -5)
-            bpmAdjustmentButton(title: "−1", amount: -1)
-            bpmAdjustmentButton(title: "+1", amount: 1)
-            bpmAdjustmentButton(title: "+5", amount: 5)
+    private func bpmAdjustmentButtons(compact: Bool) -> some View {
+        HStack(spacing: 8) {
+            bpmAdjustmentButton(title: "−5", amount: -5, compact: compact)
+            bpmAdjustmentButton(title: "−1", amount: -1, compact: compact)
+            bpmAdjustmentButton(title: "+1", amount: 1, compact: compact)
+            bpmAdjustmentButton(title: "+5", amount: 5, compact: compact)
         }
     }
 
-    private func bpmAdjustmentButton(title: String, amount: Int) -> some View {
+    private func bpmAdjustmentButton(
+        title: String,
+        amount: Int,
+        compact: Bool
+    ) -> some View {
         Button(title) {
             adjustBPM(by: amount)
         }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .frame(maxWidth: .infinity)
+        .font(.subheadline.weight(.semibold).monospacedDigit())
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity, minHeight: compact ? 38 : 42)
+        .background(Color("AppSurface"), in: RoundedRectangle(cornerRadius: 11))
+        .buttonStyle(.plain)
         .accessibilityLabel("BPMを\(abs(amount))\(amount < 0 ? "下げる" : "上げる")")
     }
 
@@ -87,93 +132,21 @@ struct MetronomeView: View {
         )
     }
 
-    private var timeSignaturePicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("拍子")
-                .font(.headline)
-
-            Picker("拍子", selection: $viewModel.selectedTimeSignature) {
-                ForEach(TimeSignature.supported) { timeSignature in
-                    Text(timeSignature.displayName).tag(timeSignature)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-        }
-    }
-
-    private var playbackButton: some View {
-        ImmediateButton(
-            tint: viewModel.isRunning ? .red : .accentColor,
-            isProminent: true
-        ) {
-            viewModel.toggleRunning()
-        } label: {
-            Text(viewModel.isRunning ? "Stop" : "Start")
-        }
-        .accessibilityLabel(viewModel.isRunning ? "Stop" : "Start")
-    }
-
-    private var subdivisionPicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("音符単位")
-                .font(.headline)
-
-            Picker(
-                "音符単位",
-                selection: Binding(
-                    get: { viewModel.selectedSubdivision },
-                    set: viewModel.setSubdivision
-                )
-            ) {
-                ForEach(Subdivision.allCases) { subdivision in
-                    Text("\(subdivision.symbol) \(subdivision.displayName)")
-                        .tag(subdivision)
-                        .accessibilityLabel(subdivision.accessibilityLabel)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-        }
-    }
-
-    private var accentPatternButton: some View {
-        Button {
-            isShowingPatternEditor = true
-        } label: {
-            Label("アクセントパターン", systemImage: "circle.grid.3x3")
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .frame(maxWidth: .infinity)
-    }
-
-    private var clickSoundButton: some View {
-        Button {
-            isShowingClickSettings = true
-        } label: {
-            Label("設定", systemImage: "gearshape")
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .frame(maxWidth: .infinity)
-    }
-
-    private var tapTempoButton: some View {
-        ImmediateButton(
-            keyboardShortcut: KeyboardShortcut(.space, modifiers: [])
-        ) {
-            let touchDownTime = ProcessInfo.processInfo.systemUptime
-            viewModel.registerTap(at: touchDownTime)
-        } label: {
-            Text("Tap Tempo")
-        }
-        .accessibilityLabel("Tap Tempo")
+    private func registerTap() {
+        let touchDownTime = ProcessInfo.processInfo.systemUptime
+        viewModel.registerTap(at: touchDownTime)
     }
 }
 
 struct MetronomeView_Previews: PreviewProvider {
     static var previews: some View {
-        MetronomeView()
+        Group {
+            MetronomeView()
+                .previewDisplayName("iPhone Portrait")
+                .previewLayout(.fixed(width: 393, height: 852))
+            MetronomeView()
+                .previewDisplayName("iPad")
+                .previewLayout(.fixed(width: 820, height: 1_080))
+        }
     }
 }

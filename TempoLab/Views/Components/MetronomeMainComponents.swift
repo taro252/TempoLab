@@ -1,0 +1,183 @@
+import SwiftUI
+
+struct MetronomeTopBar: View {
+    let onOpenSettings: () -> Void
+
+    var body: some View {
+        HStack {
+            Text("TempoLab")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white)
+
+            Spacer()
+
+            Button(action: onOpenSettings) {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color("AppSurface"), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("設定")
+        }
+        .frame(height: 44)
+    }
+}
+
+struct BPMDisplayView: View {
+    let bpm: Int
+    let compact: Bool
+
+    var body: some View {
+        VStack(spacing: compact ? -3 : 0) {
+            Text(bpm, format: .number)
+                .font(.system(size: compact ? 58 : 82, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.white)
+                .contentTransition(.numericText(value: Double(bpm)))
+
+            Text("BPM")
+                .font(.caption.weight(.semibold))
+                .tracking(2.5)
+                .foregroundStyle(Color("AppSecondaryText"))
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Tempo")
+        .accessibilityValue("\(bpm) BPM")
+    }
+}
+
+struct CompactMeterControls: View {
+    let timeSignature: TimeSignature
+    let subdivision: Subdivision
+    let onSelectTimeSignature: (TimeSignature) -> Void
+    let onSelectSubdivision: (Subdivision) -> Void
+    let onOpenPattern: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Menu {
+                ForEach(TimeSignature.supported) { signature in
+                    Button(signature.displayName) {
+                        onSelectTimeSignature(signature)
+                    }
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    Text(timeSignature.displayName)
+                        .monospacedDigit()
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.bold))
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(minWidth: 58, minHeight: 42)
+                .padding(.horizontal, 4)
+                .background(Color("AppSurface"), in: RoundedRectangle(cornerRadius: 12))
+            }
+            .accessibilityLabel("拍子")
+            .accessibilityValue(timeSignature.displayName)
+
+            HStack(spacing: 2) {
+                ForEach(Subdivision.allCases) { option in
+                    Button {
+                        onSelectSubdivision(option)
+                    } label: {
+                        Text(option.symbol)
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(option == subdivision ? Color("AppBackground") : .white)
+                            .frame(maxWidth: .infinity, minHeight: 36)
+                            .background {
+                                if option == subdivision {
+                                    RoundedRectangle(cornerRadius: 9)
+                                        .fill(Color("AppAccent"))
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(option.accessibilityLabel)
+                    .accessibilityAddTraits(option == subdivision ? .isSelected : [])
+                }
+            }
+            .padding(3)
+            .frame(maxWidth: .infinity)
+            .background(Color("AppSurface"), in: RoundedRectangle(cornerRadius: 12))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("音符単位")
+
+            Button(action: onOpenPattern) {
+                Image(systemName: "circle.grid.3x3.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color("AppSurface"), in: RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("アクセントパターン")
+        }
+    }
+}
+
+struct MetronomeTransportControls: View {
+    let isRunning: Bool
+    let buttonDiameter: CGFloat
+    let compact: Bool
+    let onTogglePlayback: () -> Void
+    let onTapTempo: () -> Void
+
+    var body: some View {
+        Group {
+            if compact {
+                HStack(spacing: 16) {
+                    playbackButton
+                    tapTempoButton
+                        .frame(maxWidth: 210)
+                }
+                .frame(maxWidth: 320)
+            } else {
+                VStack(spacing: 10) {
+                    playbackButton
+                    tapTempoButton
+                        .frame(maxWidth: 240)
+                }
+            }
+        }
+    }
+
+    private var playbackButton: some View {
+        ImmediateButton(
+            tint: isRunning ? Color("AppRunning") : Color("AppAccent"),
+            isProminent: true,
+            circularDiameter: buttonDiameter,
+            action: onTogglePlayback
+        ) {
+            VStack(spacing: 5) {
+                Image(systemName: isRunning ? "stop.fill" : "play.fill")
+                    .font(.system(size: buttonDiameter * 0.27, weight: .bold))
+                Text(isRunning ? "STOP" : "START")
+                    .font(.caption2.weight(.bold))
+                    .tracking(1)
+            }
+        }
+        .shadow(
+            color: (isRunning ? Color("AppRunning") : Color("AppAccent")).opacity(0.34),
+            radius: isRunning ? 15 : 10
+        )
+        .accessibilityLabel(isRunning ? "Stop" : "Start")
+        .accessibilityValue(isRunning ? "再生中" : "停止中")
+    }
+
+    private var tapTempoButton: some View {
+        ImmediateButton(
+            tint: Color("AppAccent"),
+            keyboardShortcut: KeyboardShortcut(.space, modifiers: []),
+            action: onTapTempo
+        ) {
+            Text("TAP TEMPO")
+                .font(.subheadline.weight(.semibold))
+                .tracking(1.2)
+        }
+        .accessibilityLabel("Tap Tempo")
+    }
+}

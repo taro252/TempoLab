@@ -95,6 +95,7 @@ struct BPMControlView: View {
     let bpm: Int
     let range: ClosedRange<Int>
     let animationRequest: BPMAnimationRequest?
+    let compact: Bool
     let onCommit: (Int) -> Void
 
     @State private var dragState: BPMDragState?
@@ -109,11 +110,13 @@ struct BPMControlView: View {
         bpm: Int,
         range: ClosedRange<Int>,
         animationRequest: BPMAnimationRequest?,
+        compact: Bool = false,
         onCommit: @escaping (Int) -> Void
     ) {
         self.bpm = bpm
         self.range = range
         self.animationRequest = animationRequest
+        self.compact = compact
         self.onCommit = onCommit
         _visualBPM = State(initialValue: Double(bpm))
     }
@@ -123,18 +126,7 @@ struct BPMControlView: View {
     }
 
     var body: some View {
-        VStack(spacing: 10) {
-            VStack(spacing: 0) {
-                Text(displayedBPM, format: .number)
-                    .font(.system(size: 72, weight: .heavy, design: .rounded))
-                    .monospacedDigit()
-                Text("BPM")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-            }
-
-            ruler
-        }
+        ruler
         .onChange(of: bpm) { _, newBPM in
             guard dragState == nil else { return }
             guard animationRequest?.toBPM != newBPM else { return }
@@ -172,15 +164,19 @@ struct BPMControlView: View {
     private var ruler: some View {
         GeometryReader { geometry in
             let centerX = geometry.size.width / 2
+            let trackY: CGFloat = compact ? 40 : 50
+            let tickY: CGFloat = compact ? 25 : 31
+            let indicatorY: CGFloat = compact ? 34 : 44
+            let markerY: CGFloat = compact ? 55 : 67
             let visibleRadius = Int(ceil(geometry.size.width / (2 * pointsPerBPM))) + 2
             let lowerBPM = max(displayedBPM - visibleRadius, range.lowerBound)
             let upperBPM = min(displayedBPM + visibleRadius, range.upperBound)
 
             ZStack {
                 Rectangle()
-                    .fill(.secondary.opacity(0.25))
+                    .fill(Color.white.opacity(0.18))
                     .frame(height: 1)
-                    .position(x: centerX, y: 50)
+                    .position(x: centerX, y: trackY)
 
                 ForEach(lowerBPM...upperBPM, id: \.self) { tickBPM in
                     tick(for: tickBPM)
@@ -189,24 +185,24 @@ struct BPMControlView: View {
                                 for: tickBPM,
                                 centerX: centerX
                             ),
-                            y: 31
+                            y: tickY
                         )
                 }
 
                 Capsule()
-                    .fill(Color.accentColor)
-                    .frame(width: 2, height: 42)
-                    .position(x: centerX, y: 44)
+                    .fill(Color("AppAccent"))
+                    .frame(width: 2, height: compact ? 34 : 42)
+                    .position(x: centerX, y: indicatorY)
 
                 Image(systemName: "triangle.fill")
                     .font(.system(size: 11))
-                    .foregroundStyle(Color.accentColor)
-                    .position(x: centerX, y: 67)
+                    .foregroundStyle(Color("AppAccent"))
+                    .position(x: centerX, y: markerY)
             }
             .contentShape(Rectangle())
             .gesture(dragGesture)
         }
-        .frame(height: 76)
+        .frame(height: compact ? 60 : 76)
         .clipped()
     }
 
@@ -223,11 +219,15 @@ struct BPMControlView: View {
                         ? .caption2.monospacedDigit().weight(.semibold)
                         : .caption2.monospacedDigit()
                 )
-                .foregroundStyle(isTenBPM ? .primary : .secondary)
+                .foregroundStyle(
+                    isTenBPM ? Color.white : Color("AppSecondaryText")
+                )
                 .frame(width: 36)
 
             Rectangle()
-                .fill(isTenBPM ? .primary : .secondary)
+                .fill(
+                    isTenBPM ? Color.white : Color("AppSecondaryText")
+                )
                 .frame(width: width, height: height)
         }
     }
