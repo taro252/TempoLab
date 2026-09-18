@@ -46,6 +46,7 @@ struct MetronomeView: View {
                     CompactMeterControls(
                         timeSignature: viewModel.selectedTimeSignature,
                         subdivision: viewModel.selectedSubdivision,
+                        playbackPositionState: viewModel.playbackPositionState,
                         onSelectTimeSignature: { viewModel.selectedTimeSignature = $0 },
                         onSelectSubdivision: viewModel.setSubdivision,
                         onOpenPattern: { isShowingPatternEditor = true }

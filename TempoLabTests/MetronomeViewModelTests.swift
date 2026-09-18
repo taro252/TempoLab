@@ -191,6 +191,25 @@ final class MetronomeViewModelTests: XCTestCase {
         XCTAssertEqual(controller.values.last, false)
     }
 
+    func testPlaybackPositionClearsWhenStopped() throws {
+        let engine = MetronomeEngineSpy()
+        let viewModel = makeViewModel(engine: engine)
+        viewModel.toggleRunning()
+
+        let position = try XCTUnwrap(
+            PlaybackPosition(
+                stepIndex: 2,
+                timeSignature: .fourFour,
+                subdivision: .quarter
+            )
+        )
+        engine.report(position)
+        XCTAssertEqual(viewModel.currentPlaybackPosition, position)
+
+        viewModel.toggleRunning()
+        XCTAssertNil(viewModel.currentPlaybackPosition)
+    }
+
     private func makeViewModel(engine: MetronomeEngineSpy) -> MetronomeViewModel {
         MetronomeViewModel(
             metronomeEngine: engine,
@@ -237,6 +256,7 @@ nonisolated private final class MetronomeEngineSpy: MetronomeEngineProtocol, @un
     private(set) var starts: [Request] = []
     private(set) var updates: [Request] = []
     private(set) var clickSettingsUpdates: [ClickSoundSettings] = []
+    private var positionHandler: MetronomeEngine.PositionHandler?
 
     func start(
         bpm: Int,
@@ -244,9 +264,11 @@ nonisolated private final class MetronomeEngineSpy: MetronomeEngineProtocol, @un
         subdivision: Subdivision,
         accentPattern: AccentPattern,
         clickSettings: ClickSoundSettings,
+        positionHandler: @escaping MetronomeEngine.PositionHandler,
         completion: @escaping MetronomeEngine.StartHandler
     ) {
         starts.append((bpm, timeSignature, subdivision, accentPattern, clickSettings))
+        self.positionHandler = positionHandler
     }
 
     func stop() {}
@@ -273,4 +295,9 @@ nonisolated private final class MetronomeEngineSpy: MetronomeEngineProtocol, @un
         settings: ClickSoundSettings,
         completion: @escaping MetronomeEngine.StartHandler
     ) {}
+
+    @MainActor
+    func report(_ position: PlaybackPosition?) {
+        positionHandler?(position)
+    }
 }

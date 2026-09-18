@@ -2,6 +2,16 @@ import Combine
 import Foundation
 
 @MainActor
+final class PlaybackPositionState: ObservableObject {
+    @Published private(set) var current: PlaybackPosition?
+
+    func update(_ position: PlaybackPosition?) {
+        guard current != position else { return }
+        current = position
+    }
+}
+
+@MainActor
 final class MetronomeViewModel: ObservableObject {
     static let bpmRange = AppSettings.bpmRange
 
@@ -25,6 +35,11 @@ final class MetronomeViewModel: ObservableObject {
     private let settingsStore: any SettingsStoring
     private let screenAwakeController: any ScreenAwakeControlling
     private var playbackRequestID = 0
+    let playbackPositionState = PlaybackPositionState()
+
+    var currentPlaybackPosition: PlaybackPosition? {
+        playbackPositionState.current
+    }
 
     var currentAccentPattern: AccentPattern {
         accentPatterns.pattern(
@@ -72,7 +87,13 @@ final class MetronomeViewModel: ObservableObject {
             timeSignature: selectedTimeSignature,
             subdivision: selectedSubdivision,
             accentPattern: currentAccentPattern,
-            clickSettings: clickSoundSettings
+            clickSettings: clickSoundSettings,
+            positionHandler: { [weak self] position in
+                guard let self,
+                      playbackRequestID == requestID,
+                      isRunning else { return }
+                playbackPositionState.update(position)
+            }
         ) { [weak self] result in
             guard let self, playbackRequestID == requestID else { return }
             if case let .failure(error) = result {
@@ -198,6 +219,9 @@ final class MetronomeViewModel: ObservableObject {
 
     private func setRunning(_ running: Bool) {
         isRunning = running
+        if !running {
+            playbackPositionState.update(nil)
+        }
         updateScreenAwakeState()
     }
 

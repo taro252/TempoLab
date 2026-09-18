@@ -76,6 +76,14 @@ struct AccentPatternEditorView: View {
                     .font(.title2.bold())
                     .foregroundStyle(color(for: emphasis))
                     .frame(width: 34, height: 34)
+                    .overlay {
+                        CurrentPatternStepRing(
+                            state: viewModel.playbackPositionState,
+                            timeSignature: viewModel.selectedTimeSignature,
+                            subdivision: viewModel.selectedSubdivision,
+                            stepIndex: index
+                        )
+                    }
             }
         }
         .buttonStyle(.plain)
@@ -101,5 +109,33 @@ struct AccentPatternEditorView: View {
         case .normal: .primary
         case .mute: .secondary
         }
+    }
+}
+
+private struct CurrentPatternStepRing: View {
+    @ObservedObject var state: PlaybackPositionState
+    let timeSignature: TimeSignature
+    let subdivision: Subdivision
+    let stepIndex: Int
+
+    private var isCurrent: Bool {
+        guard let position = state.current else { return false }
+        return position.timeSignature == timeSignature
+            && position.subdivision == subdivision
+            && position.stepIndex == stepIndex
+    }
+
+    var body: some View {
+        Circle()
+            .stroke(
+                isCurrent ? Color.accentColor : Color.clear,
+                lineWidth: 2
+            )
+            .frame(width: 38, height: 38)
+            .shadow(
+                color: isCurrent ? Color.accentColor.opacity(0.55) : .clear,
+                radius: 3
+            )
+            .accessibilityHidden(true)
     }
 }

@@ -51,6 +51,7 @@ struct BPMDisplayView: View {
 struct CompactMeterControls: View {
     let timeSignature: TimeSignature
     let subdivision: Subdivision
+    let playbackPositionState: PlaybackPositionState
     let onSelectTimeSignature: (TimeSignature) -> Void
     let onSelectSubdivision: (Subdivision) -> Void
     let onOpenPattern: () -> Void
@@ -79,26 +80,34 @@ struct CompactMeterControls: View {
             .accessibilityLabel("拍子")
             .accessibilityValue(timeSignature.displayName)
 
-            HStack(spacing: 2) {
-                ForEach(Subdivision.allCases) { option in
-                    Button {
-                        onSelectSubdivision(option)
-                    } label: {
-                        Text(option.symbol)
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundStyle(option == subdivision ? Color("AppBackground") : .white)
-                            .frame(maxWidth: .infinity, minHeight: 36)
-                            .background {
-                                if option == subdivision {
-                                    RoundedRectangle(cornerRadius: 9)
-                                        .fill(Color("AppAccent"))
+            VStack(spacing: 1) {
+                HStack(spacing: 2) {
+                    ForEach(Subdivision.allCases) { option in
+                        Button {
+                            onSelectSubdivision(option)
+                        } label: {
+                            Text(option.symbol)
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(option == subdivision ? Color("AppBackground") : .white)
+                                .frame(maxWidth: .infinity, minHeight: 29)
+                                .background {
+                                    if option == subdivision {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color("AppAccent"))
+                                    }
                                 }
-                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(option.accessibilityLabel)
+                        .accessibilityAddTraits(option == subdivision ? .isSelected : [])
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(option.accessibilityLabel)
-                    .accessibilityAddTraits(option == subdivision ? .isSelected : [])
                 }
+
+                PlaybackStepIndicator(
+                    state: playbackPositionState,
+                    timeSignature: timeSignature,
+                    subdivision: subdivision
+                )
             }
             .padding(3)
             .frame(maxWidth: .infinity)
@@ -116,6 +125,54 @@ struct CompactMeterControls: View {
             .buttonStyle(.plain)
             .accessibilityLabel("アクセントパターン")
         }
+    }
+}
+
+private struct PlaybackStepIndicator: View {
+    @ObservedObject var state: PlaybackPositionState
+    let timeSignature: TimeSignature
+    let subdivision: Subdivision
+
+    private var currentStepIndex: Int? {
+        guard let position = state.current,
+              position.timeSignature == timeSignature,
+              position.subdivision == subdivision else { return nil }
+        return position.stepIndex
+    }
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<stepCount, id: \.self) { index in
+                let isCurrent = index == currentStepIndex
+                Circle()
+                    .fill(isCurrent ? Color("AppAccent") : Color.white.opacity(0.2))
+                    .frame(width: isCurrent ? 5 : 3, height: isCurrent ? 5 : 3)
+                    .shadow(
+                        color: isCurrent ? Color("AppAccent").opacity(0.8) : .clear,
+                        radius: 3
+                    )
+                    .frame(width: 4, height: 7)
+                    .padding(
+                        .trailing,
+                        isBeatBoundary(after: index) ? 3 : 0
+                    )
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityHidden(true)
+    }
+
+    private var stepCount: Int {
+        AccentPattern.stepCount(
+            timeSignature: timeSignature,
+            subdivision: subdivision
+        )
+    }
+
+    private func isBeatBoundary(after index: Int) -> Bool {
+        let isLastStep = index == stepCount - 1
+        return !isLastStep
+            && (index + 1).isMultiple(of: subdivision.divisionsPerBeat)
     }
 }
 

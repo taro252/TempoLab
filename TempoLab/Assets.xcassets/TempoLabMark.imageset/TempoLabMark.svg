@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="brand" x1="18" y1="108" x2="110" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#32B0FF"/>
+      <stop offset="0.52" stop-color="#8C72FF"/>
+      <stop offset="1" stop-color="#E642C8"/>
+    </linearGradient>
+    <linearGradient id="face" x1="40" y1="100" x2="90" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2E9CFF" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#CC5FFF" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+  <path d="M28 105h72L78 24H50L28 105Z" fill="url(#face)" stroke="url(#brand)" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M41 94h46" fill="none" stroke="#FFFFFF" stroke-opacity="0.92" stroke-width="4" stroke-linecap="round"/>
+  <path d="M62 88L80 31" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+  <rect x="74" y="28" width="12" height="26" rx="6" fill="url(#brand)" transform="rotate(17 80 41)"/>
+  <circle cx="62" cy="88" r="6" fill="#FFFFFF"/>
+  <path d="M21 53h10M97 53h10M26 37l8 5M94 42l8-5" fill="none" stroke="url(#brand)" stroke-width="4" stroke-linecap="round"/>
+</svg>
