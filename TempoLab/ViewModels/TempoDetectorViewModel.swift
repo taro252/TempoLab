@@ -7,19 +7,35 @@ final class TempoDetectorViewModel: ObservableObject {
     @Published private(set) var lifecycleState: AudioInputLifecycleState = .stopped
     @Published private(set) var inputDecibels = AudioLevelMath.minimumDecibels
     @Published private(set) var normalizedInputLevel = 0.0
-    @Published private(set) var detectedBPM: Int?
+    @Published private(set) var detectionResult: TempoDetectionResult?
     @Published private(set) var message: String?
 
     private let audioInputEngine: any AudioInputEngineProtocol
+    private let tempoDetector: any TempoDetecting
+    private let tempoCommitHandler: @MainActor (Int) -> Void
     private var requestID = 0
 
     var isListening: Bool {
         lifecycleState == .listening
     }
 
-    init(audioInputEngine: any AudioInputEngineProtocol = AudioInputEngine()) {
+    var detectedBPM: Int? {
+        detectionResult.map { Int($0.bpm.rounded()) }
+    }
+
+    init(
+        audioInputEngine: any AudioInputEngineProtocol = AudioInputEngine(),
+        tempoDetector: any TempoDetecting = TempoDetector(),
+        tempoCommitHandler: @escaping @MainActor (Int) -> Void = { _ in }
+    ) {
         self.audioInputEngine = audioInputEngine
+        self.tempoDetector = tempoDetector
+        self.tempoCommitHandler = tempoCommitHandler
         permissionState = audioInputEngine.permissionState()
+        tempoDetector.setResultHandler { [weak self] result in
+            guard let self, isListening else { return }
+            detectionResult = result
+        }
     }
 
     func toggleListening() {
@@ -38,7 +54,8 @@ final class TempoDetectorViewModel: ObservableObject {
         requestID += 1
         let activeRequestID = requestID
         message = nil
-        detectedBPM = nil
+        detectionResult = nil
+        tempoDetector.reset()
         permissionState = audioInputEngine.permissionState()
 
         switch permissionState {
@@ -66,8 +83,20 @@ final class TempoDetectorViewModel: ObservableObject {
     func stopListening() {
         requestID += 1
         audioInputEngine.stop()
+        tempoDetector.reset()
         lifecycleState = .stopped
         resetLevel()
+    }
+
+    func resetDetection() {
+        detectionResult = nil
+        tempoDetector.reset()
+    }
+
+    func useDetectedTempo() {
+        guard let detectedBPM else { return }
+        tempoCommitHandler(detectedBPM)
+        message = "検出したテンポを\(detectedBPM) BPMに設定しました。"
     }
 
     func applicationBecameInactive() {
@@ -79,7 +108,9 @@ final class TempoDetectorViewModel: ObservableObject {
     private func beginInput(requestID activeRequestID: Int) {
         lifecycleState = .starting
         audioInputEngine.start(
-            bufferHandler: nil,
+            bufferHandler: { [weak tempoDetector] buffer, time in
+                tempoDetector?.process(buffer: buffer, at: time)
+            },
             levelHandler: { [weak self] decibels, normalized in
                 guard let self,
                       requestID == activeRequestID,

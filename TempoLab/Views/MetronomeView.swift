@@ -96,7 +96,10 @@ struct MetronomeView: View {
             AccentPatternEditorView(viewModel: viewModel)
         }
         .sheet(isPresented: $isShowingTempoDetector) {
-            TempoDetectorView()
+            TempoDetectorView(
+                isMetronomeRunning: viewModel.isRunning,
+                onUseTempo: viewModel.setBPM
+            )
         }
     }
 

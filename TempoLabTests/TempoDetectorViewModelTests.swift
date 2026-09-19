@@ -67,6 +67,65 @@ final class TempoDetectorViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.normalizedInputLevel, 0)
         XCTAssertNotNil(viewModel.message)
     }
+
+    func testDetectionResultCommitsRoundedTempoThroughHandler() {
+        let engine = AudioInputEngineSpy(permission: .granted)
+        let detector = TempoDetectorSpy()
+        var committedBPM: Int?
+        let viewModel = TempoDetectorViewModel(
+            audioInputEngine: engine,
+            tempoDetector: detector,
+            tempoCommitHandler: { committedBPM = $0 }
+        )
+        viewModel.startListening()
+        engine.completeStartSuccessfully()
+
+        detector.emit(.init(
+            bpm: 119.7,
+            confidence: 0.82,
+            candidates: [.init(bpm: 119.7, score: 0.82)]
+        ))
+        viewModel.useDetectedTempo()
+
+        XCTAssertEqual(viewModel.detectedBPM, 120)
+        XCTAssertEqual(committedBPM, 120)
+    }
+
+    func testResultPublishedAfterStopIsIgnored() {
+        let engine = AudioInputEngineSpy(permission: .granted)
+        let detector = TempoDetectorSpy()
+        let viewModel = TempoDetectorViewModel(
+            audioInputEngine: engine,
+            tempoDetector: detector
+        )
+        viewModel.startListening()
+        engine.completeStartSuccessfully()
+        viewModel.stopListening()
+
+        detector.emit(.init(bpm: 100, confidence: 0.8, candidates: []))
+
+        XCTAssertNil(viewModel.detectionResult)
+    }
+}
+
+nonisolated private final class TempoDetectorSpy: TempoDetecting, @unchecked Sendable {
+    private var resultHandler: ResultHandler?
+    private(set) var resetCallCount = 0
+
+    func setResultHandler(_ handler: @escaping ResultHandler) {
+        resultHandler = handler
+    }
+
+    func process(buffer: AVAudioPCMBuffer, at time: AVAudioTime) {}
+
+    func reset() {
+        resetCallCount += 1
+    }
+
+    @MainActor
+    func emit(_ result: TempoDetectionResult?) {
+        resultHandler?(result)
+    }
 }
 
 nonisolated private final class AudioInputEngineSpy: AudioInputEngineProtocol, @unchecked Sendable {
