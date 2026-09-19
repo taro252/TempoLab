@@ -5,6 +5,7 @@ struct MetronomeView: View {
     @State private var bpmAnimationRequest: BPMAnimationRequest?
     @State private var isShowingClickSettings = false
     @State private var isShowingPatternEditor = false
+    @State private var isShowingTempoDetector = false
 
     var body: some View {
         ZStack {
@@ -24,9 +25,10 @@ struct MetronomeView: View {
                 let contentSpacing: CGFloat = compact ? 4 : 12
 
                 VStack(spacing: contentSpacing) {
-                    MetronomeTopBar {
-                        isShowingClickSettings = true
-                    }
+                    MetronomeTopBar(
+                        onOpenTempoDetector: { isShowingTempoDetector = true },
+                        onOpenSettings: { isShowingClickSettings = true }
+                    )
 
                     Spacer(minLength: compact ? 0 : 2)
 
@@ -92,6 +94,9 @@ struct MetronomeView: View {
         }
         .sheet(isPresented: $isShowingPatternEditor) {
             AccentPatternEditorView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $isShowingTempoDetector) {
+            TempoDetectorView()
         }
     }
 

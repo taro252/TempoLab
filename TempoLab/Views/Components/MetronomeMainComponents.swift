@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MetronomeTopBar: View {
+    let onOpenTempoDetector: () -> Void
     let onOpenSettings: () -> Void
 
     var body: some View {
@@ -11,15 +12,27 @@ struct MetronomeTopBar: View {
 
             Spacer()
 
-            Button(action: onOpenSettings) {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(Color("AppSurface"), in: Circle())
+            HStack(spacing: 8) {
+                Button(action: onOpenTempoDetector) {
+                    Image(systemName: "waveform.badge.mic")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(Color("AppSurface"), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("テンポ検出")
+
+                Button(action: onOpenSettings) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(Color("AppSurface"), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("設定")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("設定")
         }
         .frame(height: 44)
     }

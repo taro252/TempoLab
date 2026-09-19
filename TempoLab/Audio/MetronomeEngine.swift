@@ -24,6 +24,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     private let positionPlayerNode = AVAudioPlayerNode()
     private let soundGenerator = ClickSoundGenerator()
     private let positionReporter = PlaybackPositionReporter()
+    private let sessionCoordinator = AudioSessionCoordinator.shared
     private let schedulingQueue = DispatchQueue(label: "jp.taro252.TempoLab.metronome-scheduling")
     private let lookAheadBeatCount = 2
     private let schedulingLeadFrameCount: AVAudioFramePosition = 512
@@ -591,17 +592,11 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     }
 
     private func configureAudioSessionIfNeeded() throws {
-        #if os(iOS)
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
-        try session.setActive(true)
-        #endif
+        try sessionCoordinator.beginPlayback()
     }
 
     private func deactivateAudioSessionIfNeeded() {
-        #if os(iOS)
-        try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
-        #endif
+        sessionCoordinator.endPlayback()
     }
 }
 
