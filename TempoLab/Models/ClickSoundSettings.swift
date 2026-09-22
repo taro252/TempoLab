@@ -10,10 +10,10 @@ nonisolated enum ClickSoundType: String, CaseIterable, Codable, Identifiable, Se
 
     var displayName: String {
         switch self {
-        case .sine: "Sine"
-        case .square: "Square"
-        case .wood: "Wood"
-        case .digital: "Digital"
+        case .sine: String(localized: "Sine")
+        case .square: String(localized: "Square")
+        case .wood: String(localized: "Wood")
+        case .digital: String(localized: "Digital")
         }
     }
 }

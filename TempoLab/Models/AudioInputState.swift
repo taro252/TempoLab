@@ -8,11 +8,11 @@ nonisolated enum MicrophonePermissionState: Sendable, Equatable {
     var displayName: String {
         switch self {
         case .undetermined:
-            return "未確認"
+            return String(localized: "未確認")
         case .granted:
-            return "許可済み"
+            return String(localized: "許可済み")
         case .denied:
-            return "許可されていません"
+            return String(localized: "許可されていません")
         }
     }
 }
@@ -39,11 +39,11 @@ nonisolated enum AudioInputEngineError: Error, LocalizedError, Sendable {
     var errorDescription: String? {
         switch self {
         case .permissionDenied:
-            return "マイクへのアクセスが許可されていません。システム設定でTempoLabのマイクアクセスを許可してください。"
+            return String(localized: "マイクへのアクセスが許可されていません。システム設定でTempoLabのマイクアクセスを許可してください。")
         case .inputFormatUnavailable:
-            return "利用可能なマイク入力形式を取得できませんでした。"
+            return String(localized: "利用可能なマイク入力形式を取得できませんでした。")
         case let .startFailed(message):
-            return "マイク入力を開始できませんでした: \(message)"
+            return String(format: String(localized: "マイク入力を開始できませんでした: %@"), message)
         }
     }
 }

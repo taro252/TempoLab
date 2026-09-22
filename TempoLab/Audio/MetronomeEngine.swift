@@ -8,9 +8,9 @@ nonisolated enum MetronomeEngineError: Error, LocalizedError, Sendable {
     var errorDescription: String? {
         switch self {
         case .audioFormatUnavailable:
-            return "利用可能なオーディオ形式を取得できませんでした。"
+            return String(localized: "利用可能なオーディオ形式を取得できませんでした。")
         case let .startFailed(message):
-            return "メトロノームを開始できませんでした: \(message)"
+            return String(format: String(localized: "メトロノームを開始できませんでした: %@"), message)
         }
     }
 }
@@ -192,7 +192,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
 
             do {
                 guard !isRunning else {
-                    throw MetronomeEngineError.startFailed("再生中はプレビューできません。")
+                    throw MetronomeEngineError.startFailed(String(localized: "再生中はプレビューできません。"))
                 }
                 try previewClickImmediately(isAccent: isAccent, settings: settings)
                 result = .success(())

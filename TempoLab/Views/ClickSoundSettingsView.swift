@@ -28,19 +28,19 @@ struct ClickSoundSettingsView: View {
         #if os(macOS)
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                MacSettingsCard(title: "音色", systemImage: "waveform") {
+                MacSettingsCard(title: String(localized: "音色"), systemImage: "waveform") {
                     soundTypePicker
                 }
 
-                MacSettingsCard(title: "音程", systemImage: "tuningfork") {
+                MacSettingsCard(title: String(localized: "音程"), systemImage: "tuningfork") {
                     frequencyControls
                 }
 
-                MacSettingsCard(title: "音量", systemImage: "speaker.wave.2") {
+                MacSettingsCard(title: String(localized: "音量"), systemImage: "speaker.wave.2") {
                     volumeControl
                 }
 
-                MacSettingsCard(title: "プレビュー", systemImage: "play.circle") {
+                MacSettingsCard(title: String(localized: "プレビュー"), systemImage: "play.circle") {
                     previewControls
                 }
             }
@@ -101,8 +101,8 @@ struct ClickSoundSettingsView: View {
     private var frequencyControls: some View {
         VStack(spacing: 12) {
             FrequencySettingRow(
-                title: "通常クリック",
-                accessibilityLabel: "通常クリックの音程",
+                title: String(localized: "通常クリック"),
+                accessibilityLabel: String(localized: "通常クリックの音程"),
                 frequency: viewModel.clickSoundSettings.normalFrequency,
                 range: ClickSoundSettings.normalFrequencyRange,
                 onCommit: viewModel.setNormalFrequency
@@ -111,8 +111,8 @@ struct ClickSoundSettingsView: View {
             Divider()
 
             FrequencySettingRow(
-                title: "アクセントクリック",
-                accessibilityLabel: "アクセントクリックの音程",
+                title: String(localized: "アクセントクリック"),
+                accessibilityLabel: String(localized: "アクセントクリックの音程"),
                 frequency: viewModel.clickSoundSettings.accentFrequency,
                 range: ClickSoundSettings.accentFrequencyRange,
                 onCommit: viewModel.setAccentFrequency
@@ -148,7 +148,7 @@ struct ClickSoundSettingsView: View {
             }
             .accessibilityLabel("クリック音量")
             .accessibilityValue(
-                "\(Int((displayedVolume * 100).rounded())) percent"
+                String(format: String(localized: "%d percent"), Int((displayedVolume * 100).rounded()))
             )
         }
     }
@@ -248,7 +248,7 @@ private struct FrequencySettingRow: View {
                 }
             }
             .accessibilityLabel(accessibilityLabel)
-            .accessibilityValue("\(displayedFrequency) Hertz")
+            .accessibilityValue(String(format: String(localized: "%d Hertz"), displayedFrequency))
         }
     }
 }

@@ -23,9 +23,9 @@ nonisolated enum StepEmphasis: String, CaseIterable, Codable, Sendable {
 
     var accessibilityLabel: String {
         switch self {
-        case .accent: "アクセント"
-        case .normal: "通常"
-        case .mute: "ミュート"
+        case .accent: String(localized: "アクセント")
+        case .normal: String(localized: "通常")
+        case .mute: String(localized: "ミュート")
         }
     }
 

@@ -45,15 +45,15 @@ struct TempoDetectorView: View {
         #if os(macOS)
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                MacDetectorCard(title: "マイク", systemImage: "mic") {
+                MacDetectorCard(title: String(localized: "マイク"), systemImage: "mic") {
                     microphoneControls
                 }
 
-                MacDetectorCard(title: "Input Level", systemImage: "waveform") {
+                MacDetectorCard(title: String(localized: "Input Level"), systemImage: "waveform") {
                     inputLevelContent
                 }
 
-                MacDetectorCard(title: "Detected Tempo", systemImage: "metronome") {
+                MacDetectorCard(title: String(localized: "Detected Tempo"), systemImage: "metronome") {
                     detectedTempoContent
                 }
 
@@ -100,7 +100,7 @@ struct TempoDetectorView: View {
                 LabeledContent("アクセス", value: viewModel.permissionState.displayName)
 
                 #if os(macOS)
-                Button(viewModel.isListening ? "Stop Listening" : "Start Listening") {
+                Button(viewModel.isListening ? String(localized: "Stop Listening") : String(localized: "Start Listening")) {
                     viewModel.toggleListening()
                 }
                 .buttonStyle(.borderedProminent)
@@ -117,7 +117,7 @@ struct TempoDetectorView: View {
             }
 
             #if os(iOS)
-            Button(viewModel.isListening ? "Stop Listening" : "Start Listening") {
+            Button(viewModel.isListening ? String(localized: "Stop Listening") : String(localized: "Start Listening")) {
                 viewModel.toggleListening()
             }
             .buttonStyle(.borderedProminent)
@@ -125,8 +125,8 @@ struct TempoDetectorView: View {
         }
         .accessibilityHint(
             viewModel.isListening
-                ? "マイク入力を停止します"
-                : "必要に応じてマイクへのアクセスを確認し、入力を開始します"
+                ? String(localized: "マイク入力を停止します")
+                : String(localized: "必要に応じてマイクへのアクセスを確認し、入力を開始します")
         )
     }
 
@@ -136,7 +136,7 @@ struct TempoDetectorView: View {
                 .tint(Color("AppAccent"))
                 .accessibilityLabel("入力レベル")
                 .accessibilityValue(
-                    "\(Int((viewModel.normalizedInputLevel * 100).rounded()))パーセント"
+                    String(format: String(localized: "%dパーセント"), Int((viewModel.normalizedInputLevel * 100).rounded()))
                 )
 
             Text("\(viewModel.inputDecibels, format: .number.precision(.fractionLength(1))) dBFS")
@@ -158,7 +158,7 @@ struct TempoDetectorView: View {
             .frame(maxWidth: .infinity)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("検出テンポ")
-            .accessibilityValue(viewModel.detectedBPM.map { "\($0) BPM" } ?? "未検出")
+            .accessibilityValue(viewModel.detectedBPM.map { "\($0) BPM" } ?? String(localized: "未検出"))
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -202,7 +202,7 @@ struct TempoDetectorView: View {
                 }
             } else {
                 HStack {
-                    Text(viewModel.isListening ? "Listening..." : "Start Listeningで解析を開始します。")
+                    Text(viewModel.isListening ? String(localized: "Listening...") : String(localized: "Start Listeningで解析を開始します。"))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 

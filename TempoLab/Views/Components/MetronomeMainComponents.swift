@@ -226,7 +226,7 @@ struct MetronomeTransportControls: View {
             VStack(spacing: 5) {
                 Image(systemName: isRunning ? "stop.fill" : "play.fill")
                     .font(.system(size: buttonDiameter * 0.27, weight: .bold))
-                Text(isRunning ? "STOP" : "START")
+                Text(isRunning ? String(localized: "STOP") : String(localized: "START"))
                     .font(.caption2.weight(.bold))
                     .tracking(1)
             }
@@ -235,8 +235,8 @@ struct MetronomeTransportControls: View {
             color: (isRunning ? Color("AppRunning") : Color("AppAccent")).opacity(0.34),
             radius: isRunning ? 15 : 10
         )
-        .accessibilityLabel(isRunning ? "Stop" : "Start")
-        .accessibilityValue(isRunning ? "再生中" : "停止中")
+        .accessibilityLabel(isRunning ? String(localized: "Stop") : String(localized: "Start"))
+        .accessibilityValue(isRunning ? String(localized: "再生中") : String(localized: "停止中"))
     }
 
     private var tapTempoButton: some View {

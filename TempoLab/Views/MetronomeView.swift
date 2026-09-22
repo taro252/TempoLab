@@ -87,7 +87,7 @@ struct MetronomeView: View {
                 viewModel.dismissAudioError()
             }
         } message: {
-            Text(viewModel.audioErrorMessage ?? "不明なエラーが発生しました。")
+            Text(viewModel.audioErrorMessage ?? String(localized: "不明なエラーが発生しました。"))
         }
         .sheet(isPresented: $isShowingClickSettings) {
             ClickSoundSettingsView(viewModel: viewModel)
@@ -128,7 +128,12 @@ struct MetronomeView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("BPMを\(abs(amount))\(amount < 0 ? "下げる" : "上げる")")
+        .accessibilityLabel(
+            String(
+                format: String(localized: amount < 0 ? "BPMを%d下げる" : "BPMを%d上げる"),
+                abs(amount)
+            )
+        )
     }
 
     private func adjustBPM(by amount: Int) {

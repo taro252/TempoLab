@@ -1,0 +1,102 @@
+/* Main screen */
+"TempoLab" = "TempoLab";
+"BPM" = "BPM";
+"Tempo" = "Tempo";
+"テンポ検出" = "Tempo Detection";
+"設定" = "Settings";
+"拍子" = "Time Signature";
+"音符単位" = "Subdivision";
+"アクセントパターン" = "Accent Pattern";
+"START" = "START";
+"STOP" = "STOP";
+"Start" = "Start";
+"Stop" = "Stop";
+"再生中" = "Playing";
+"停止中" = "Stopped";
+"TAP TEMPO" = "TAP TEMPO";
+"Tap Tempo" = "Tap Tempo";
+"BPMを%d下げる" = "Decrease BPM by %d";
+"BPMを%d上げる" = "Increase BPM by %d";
+"オーディオエラー" = "Audio Error";
+"不明なエラーが発生しました。" = "An unknown error occurred.";
+"OK" = "OK";
+
+/* Settings */
+"完了" = "Done";
+"一般" = "General";
+"再生中は画面をスリープしない" = "Keep Screen Awake While Playing";
+"メトロノームの再生中だけ自動ロックを無効にします" = "Prevents auto-lock only while the metronome is playing";
+"音色" = "Sound Type";
+"音程" = "Pitch";
+"音量" = "Volume";
+"プレビュー" = "Preview";
+"クリック音色" = "Click Sound Type";
+"通常クリック" = "Normal Click";
+"通常クリックの音程" = "Normal Click Pitch";
+"アクセントクリック" = "Accent Click";
+"アクセントクリックの音程" = "Accent Click Pitch";
+"クリック音量" = "Click Volume";
+"通常音を確認" = "Preview Normal";
+"アクセントを確認" = "Preview Accent";
+"メトロノーム再生中はプレビューを利用できません。" = "Preview is unavailable while the metronome is playing.";
+"Sine" = "Sine";
+"Square" = "Square";
+"Wood" = "Wood";
+"Digital" = "Digital";
+"%d percent" = "%d percent";
+"%d Hertz" = "%d Hertz";
+
+/* Accent pattern */
+"各ステップをタップすると、アクセント → 通常 → ミュートの順に切り替わります。再生中の変更は次の拍から反映されます。" = "Tap a step to cycle through accent, normal, and mute. Changes during playback take effect on the next beat.";
+"アクセント" = "Accent";
+"通常" = "Normal";
+"ミュート" = "Mute";
+"Beat %d" = "Beat %d";
+"Beat %d、%@、ステップ %d" = "Beat %d, %@, step %d";
+"タップして次の状態へ変更" = "Tap to change to the next state";
+"Quarter" = "Quarter";
+"8th" = "Eighth";
+"Triplet" = "Triplet";
+"16th" = "Sixteenth";
+"4分音符" = "Quarter note";
+"8分音符" = "Eighth note";
+"3連符" = "Triplet";
+"16分音符" = "Sixteenth note";
+
+/* Tempo detector */
+"Tempo Detector" = "Tempo Detector";
+"マイク" = "Microphone";
+"アクセス" = "Access";
+"Input Level" = "Input Level";
+"入力レベル" = "Input Level";
+"Detected Tempo" = "Detected Tempo";
+"検出テンポ" = "Detected Tempo";
+"Stop Listening" = "Stop Listening";
+"Start Listening" = "Start Listening";
+"メトロノーム音を検出する可能性があります。ヘッドフォンの使用を推奨します。" = "The microphone may pick up the metronome. Headphones are recommended.";
+"マイク入力を停止します" = "Stop microphone input";
+"必要に応じてマイクへのアクセスを確認し、入力を開始します" = "Request microphone access if needed and start listening";
+"%dパーセント" = "%d percent";
+"未検出" = "Not detected";
+"Confidence" = "Confidence";
+"Candidates" = "Candidates";
+"Reset Detection" = "Reset Detection";
+"Use This Tempo" = "Use This Tempo";
+"Listening..." = "Listening...";
+"Start Listeningで解析を開始します。" = "Tap Start Listening to begin analysis.";
+"未確認" = "Not Determined";
+"許可済み" = "Allowed";
+"許可されていません" = "Not Allowed";
+"検出したテンポを%d BPMに設定しました。" = "Detected tempo set to %d BPM.";
+"バックグラウンド移行によりマイク入力を停止しました。" = "Microphone input stopped because the app moved to the background.";
+"オーディオ割り込みによりマイク入力を停止しました。" = "Microphone input stopped due to an audio interruption.";
+"入力機器の変更によりマイク入力を停止しました。" = "Microphone input stopped because the input device changed.";
+"オーディオ構成の変更によりマイク入力を停止しました。" = "Microphone input stopped because the audio configuration changed.";
+
+/* Errors */
+"マイクへのアクセスが許可されていません。システム設定でTempoLabのマイクアクセスを許可してください。" = "Microphone access is not allowed. Enable it for TempoLab in System Settings.";
+"利用可能なマイク入力形式を取得できませんでした。" = "Could not obtain an available microphone input format.";
+"マイク入力を開始できませんでした: %@" = "Could not start microphone input: %@";
+"利用可能なオーディオ形式を取得できませんでした。" = "Could not obtain an available audio format.";
+"メトロノームを開始できませんでした: %@" = "Could not start the metronome: %@";
+"再生中はプレビューできません。" = "Preview is unavailable during playback.";

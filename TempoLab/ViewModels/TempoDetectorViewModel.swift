@@ -96,13 +96,13 @@ final class TempoDetectorViewModel: ObservableObject {
     func useDetectedTempo() {
         guard let detectedBPM else { return }
         tempoCommitHandler(detectedBPM)
-        message = "検出したテンポを\(detectedBPM) BPMに設定しました。"
+        message = String(format: String(localized: "検出したテンポを%d BPMに設定しました。"), detectedBPM)
     }
 
     func applicationBecameInactive() {
         guard isListening || lifecycleState == .starting else { return }
         stopListening()
-        message = "バックグラウンド移行によりマイク入力を停止しました。"
+        message = String(localized: "バックグラウンド移行によりマイク入力を停止しました。")
     }
 
     private func beginInput(requestID activeRequestID: Int) {
@@ -147,11 +147,11 @@ final class TempoDetectorViewModel: ObservableObject {
     private static func message(for reason: AudioInputStopReason) -> String {
         switch reason {
         case .interruption:
-            return "オーディオ割り込みによりマイク入力を停止しました。"
+            return String(localized: "オーディオ割り込みによりマイク入力を停止しました。")
         case .routeChanged:
-            return "入力機器の変更によりマイク入力を停止しました。"
+            return String(localized: "入力機器の変更によりマイク入力を停止しました。")
         case .engineConfigurationChanged:
-            return "オーディオ構成の変更によりマイク入力を停止しました。"
+            return String(localized: "オーディオ構成の変更によりマイク入力を停止しました。")
         }
     }
 }

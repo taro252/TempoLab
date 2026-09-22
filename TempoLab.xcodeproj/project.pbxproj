@@ -156,9 +156,10 @@
 				};
 			};
 			buildConfigurationList = A204CA0A305905780006511B /* Build configuration list for PBXProject "TempoLab" */;
-			developmentRegion = en;
+			developmentRegion = ja;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				ja,
 				en,
 				Base,
 			);

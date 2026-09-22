@@ -28,19 +28,19 @@ nonisolated enum Subdivision: String, CaseIterable, Codable, Identifiable, Senda
 
     var displayName: String {
         switch self {
-        case .quarter: "Quarter"
-        case .eighth: "8th"
-        case .triplet: "Triplet"
-        case .sixteenth: "16th"
+        case .quarter: String(localized: "Quarter")
+        case .eighth: String(localized: "8th")
+        case .triplet: String(localized: "Triplet")
+        case .sixteenth: String(localized: "16th")
         }
     }
 
     var accessibilityLabel: String {
         switch self {
-        case .quarter: "4分音符"
-        case .eighth: "8分音符"
-        case .triplet: "3連符"
-        case .sixteenth: "16分音符"
+        case .quarter: String(localized: "4分音符")
+        case .eighth: String(localized: "8分音符")
+        case .triplet: String(localized: "3連符")
+        case .sixteenth: String(localized: "16分音符")
         }
     }
 

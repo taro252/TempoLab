@@ -47,7 +47,7 @@ struct AccentPatternEditorView: View {
 
     private func beatGroup(beat: Int) -> some View {
         VStack(spacing: 8) {
-            Text("Beat \(beat + 1)")
+            Text(String(format: String(localized: "Beat %d"), beat + 1))
                 .font(.caption.bold())
 
             HStack(spacing: 6) {
@@ -88,7 +88,12 @@ struct AccentPatternEditorView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            "Beat \(beat + 1)、\(viewModel.selectedSubdivision.accessibilityLabel)、ステップ \(part + 1)"
+            String(
+                format: String(localized: "Beat %d、%@、ステップ %d"),
+                beat + 1,
+                viewModel.selectedSubdivision.accessibilityLabel,
+                part + 1
+            )
         )
         .accessibilityValue(emphasis.accessibilityLabel)
         .accessibilityHint("タップして次の状態へ変更")
