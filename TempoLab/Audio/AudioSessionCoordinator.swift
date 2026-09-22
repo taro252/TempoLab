@@ -1,80 +1,64 @@
 import AVFoundation
 import Foundation
 
-/// iOSの共有Audio Sessionを、再生側と入力側が互いに停止させず利用するための調整役。
+/// 入出力に共通のAudio Sessionを一度だけ構成し、通常のStart/Stopでは変更しない。
 nonisolated final class AudioSessionCoordinator: @unchecked Sendable {
     static let shared = AudioSessionCoordinator()
 
     private let lock = NSLock()
-    private var playbackIsActive = false
-    private var inputIsActive = false
+    private var isActive = false
+    #if os(iOS)
+    private var interruptionToken: NSObjectProtocol?
+    #endif
 
-    private init() {}
-
-    func beginPlayback() throws {
-        try updateActivity(playback: true)
+    private init() {
+        #if os(iOS)
+        interruptionToken = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance(),
+            queue: nil
+        ) { [weak self] notification in
+            guard let rawValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  AVAudioSession.InterruptionType(rawValue: rawValue) == .began,
+                  let self else { return }
+            self.lock.withLock { self.isActive = false }
+        }
+        #endif
     }
 
-    func endPlayback() {
-        try? updateActivity(playback: false)
+    func beginPlayback() throws {
+        try activateIfNeeded()
     }
 
     func beginInput() throws {
-        try updateActivity(input: true)
+        try activateIfNeeded()
     }
 
-    func endInput() {
-        try? updateActivity(input: false)
+    // 入力停止後も再生側のEngineと共有Sessionをwarmに保つ。
+    func endInput() {}
+
+    var isReady: Bool {
+        #if os(iOS)
+        return lock.withLock { isActive }
+        #else
+        return true
+        #endif
     }
 
-    private func updateActivity(
-        playback: Bool? = nil,
-        input: Bool? = nil
-    ) throws {
+    private func activateIfNeeded() throws {
         lock.lock()
         defer { lock.unlock() }
-
-        let previousPlayback = playbackIsActive
-        let previousInput = inputIsActive
-        playbackIsActive = playback ?? playbackIsActive
-        inputIsActive = input ?? inputIsActive
-
-        do {
-            try applyAudioSession(
-                previousPlayback: previousPlayback,
-                previousInput: previousInput
-            )
-        } catch {
-            playbackIsActive = previousPlayback
-            inputIsActive = previousInput
-            throw error
-        }
-    }
-
-    private func applyAudioSession(
-        previousPlayback: Bool,
-        previousInput: Bool
-    ) throws {
         #if os(iOS)
+        guard !isActive else { return }
         let session = AVAudioSession.sharedInstance()
-
-        if inputIsActive || playbackIsActive {
-            if !previousInput && !previousPlayback {
-                // 再生開始後にcategoryを切り替えると出力Engineが再構成され得るため、
-                // 最初から入出力を共存できる構成でSessionを開始する。
-                try session.setCategory(
-                    .playAndRecord,
-                    mode: .default,
-                    options: [.mixWithOthers, .defaultToSpeaker]
-                )
-                try session.setActive(true)
-            }
-            return
-        }
-
-        if previousPlayback || previousInput {
-            try session.setActive(false, options: [.notifyOthersOnDeactivation])
-        }
+        // マイクとバックグラウンド再生を同時に使える構成を最初から選ぶ。
+        try session.setCategory(
+            .playAndRecord,
+            mode: .default,
+            options: [.mixWithOthers, .defaultToSpeaker]
+        )
+        try session.setActive(true)
+        isActive = true
         #endif
     }
 }

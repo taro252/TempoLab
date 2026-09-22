@@ -1,4 +1,5 @@
 import AVFoundation
+import OSLog
 
 nonisolated enum MetronomeEngineError: Error, LocalizedError, Sendable {
     case audioFormatUnavailable
@@ -25,6 +26,9 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     private let soundGenerator = ClickSoundGenerator()
     private let positionReporter = PlaybackPositionReporter()
     private let sessionCoordinator = AudioSessionCoordinator.shared
+    #if DEBUG
+    private let startLogger = Logger(subsystem: "jp.taro252.TempoLab", category: "MetronomeStart")
+    #endif
     private let schedulingQueue = DispatchQueue(label: "jp.taro252.TempoLab.metronome-scheduling")
     private let lookAheadBeatCount = 2
     private let schedulingLeadFrameCount: AVAudioFramePosition = 512
@@ -41,6 +45,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     )
     private var bpm = 120
     private var clickSettings = ClickSoundSettings.default
+    private var preparedClickSettings: ClickSoundSettings?
     private var isPreviewing = false
     private var nextBeatIndex = 0
     private var nextSubdivisionIndexInBeat = 0
@@ -69,7 +74,15 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         audioEngine.attach(positionPlayerNode)
     }
 
+    func prepare(clickSettings: ClickSoundSettings) {
+        schedulingQueue.async { [self] in
+            // Start時にも再試行する。起動時に出力機器が未準備でも失敗を固定しない。
+            try? ensureAudioReady(clickSettings: clickSettings)
+        }
+    }
+
     func start(
+        actionUptime: TimeInterval,
         bpm: Int,
         timeSignature: TimeSignature,
         subdivision: Subdivision,
@@ -83,6 +96,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
 
             do {
                 try startImmediately(
+                    actionUptime: actionUptime,
                     bpm: bpm,
                     timeSignature: timeSignature,
                     subdivision: subdivision,
@@ -92,10 +106,10 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                 )
                 result = .success(())
             } catch let error as MetronomeEngineError {
-                stopImmediately()
+                stopPlaybackImmediately()
                 result = .failure(error)
             } catch {
-                stopImmediately()
+                stopPlaybackImmediately()
                 result = .failure(.startFailed(error.localizedDescription))
             }
 
@@ -107,7 +121,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
 
     func stop() {
         schedulingQueue.async { [self] in
-            stopImmediately()
+            stopPlaybackImmediately()
         }
     }
 
@@ -129,12 +143,12 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                     accentPattern: accentPattern
                 )
             } catch let error as MetronomeEngineError {
-                stopImmediately()
+                stopPlaybackImmediately()
                 DispatchQueue.main.async {
                     onFailure(error)
                 }
             } catch {
-                stopImmediately()
+                stopPlaybackImmediately()
                 DispatchQueue.main.async {
                     onFailure(.startFailed(error.localizedDescription))
                 }
@@ -155,12 +169,12 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             do {
                 try applyClickSettings(settings)
             } catch let error as MetronomeEngineError {
-                stopImmediately()
+                stopPlaybackImmediately()
                 DispatchQueue.main.async {
                     onFailure(error)
                 }
             } catch {
-                stopImmediately()
+                stopPlaybackImmediately()
                 DispatchQueue.main.async {
                     onFailure(.startFailed(error.localizedDescription))
                 }
@@ -183,10 +197,10 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                 try previewClickImmediately(isAccent: isAccent, settings: settings)
                 result = .success(())
             } catch let error as MetronomeEngineError {
-                stopImmediately()
+                stopPlaybackImmediately()
                 result = .failure(error)
             } catch {
-                stopImmediately()
+                stopPlaybackImmediately()
                 result = .failure(.startFailed(error.localizedDescription))
             }
 
@@ -197,6 +211,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     }
 
     private func startImmediately(
+        actionUptime: TimeInterval,
         bpm: Int,
         timeSignature: TimeSignature,
         subdivision: Subdivision,
@@ -204,10 +219,12 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         clickSettings: ClickSoundSettings,
         positionHandler: @escaping PositionHandler
     ) throws {
-        stopImmediately()
+        #if DEBUG
+        let wasWarm = audioEngine.isRunning
+        #endif
+        try ensureAudioReady(clickSettings: clickSettings)
+        stopPlaybackImmediately()
         positionReporter.begin(handler: positionHandler)
-        try configureAudioSessionIfNeeded()
-        try prepareAudioGraph(clickSettings: clickSettings)
 
         self.bpm = bpm
         self.timeSignature = timeSignature
@@ -223,26 +240,25 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             count: lookAheadBeatCount * subdivision.divisionsPerBeat,
             firstBufferOptions: []
         )
-
-        audioEngine.prepare()
-        do {
-            try audioEngine.start()
-        } catch {
-            throw MetronomeEngineError.startFailed(error.localizedDescription)
-        }
+        #if DEBUG
+        let scheduledAt = ProcessInfo.processInfo.systemUptime
+        #endif
 
         playerNode.play()
         positionPlayerNode.play()
         isRunning = true
+        #if DEBUG
+        let playCalledAt = ProcessInfo.processInfo.systemUptime
+        startLogger.debug("warm=\(wasWarm), action→scheduled=\(Int((scheduledAt - actionUptime) * 1_000)) ms, action→play=\(Int((playCalledAt - actionUptime) * 1_000)) ms")
+        #endif
     }
 
     private func previewClickImmediately(
         isAccent: Bool,
         settings: ClickSoundSettings
     ) throws {
-        stopImmediately()
-        try configureAudioSessionIfNeeded()
-        try prepareAudioGraph(clickSettings: settings)
+        try ensureAudioReady(clickSettings: settings)
+        stopPlaybackImmediately()
 
         guard let buffer = isAccent ? accentClickBuffer : normalClickBuffer else {
             throw MetronomeEngineError.audioFormatUnavailable
@@ -260,16 +276,10 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                 guard let self,
                       isPreviewing,
                       generation == previewGeneration else { return }
-                stopImmediately()
+                stopPlaybackImmediately()
             }
         }
 
-        audioEngine.prepare()
-        do {
-            try audioEngine.start()
-        } catch {
-            throw MetronomeEngineError.startFailed(error.localizedDescription)
-        }
         playerNode.play()
     }
 
@@ -338,17 +348,53 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         }
     }
 
+    private func ensureAudioReady(clickSettings: ClickSoundSettings) throws {
+        if sessionCoordinator.isReady,
+           audioEngine.isRunning,
+           preparedClickSettings == clickSettings,
+           normalClickBuffer != nil,
+           accentClickBuffer != nil,
+           muteBuffer != nil,
+           positionMarkerBuffer != nil {
+            return
+        }
+        try sessionCoordinator.beginPlayback()
+        try prepareAudioGraph(clickSettings: clickSettings)
+        guard !audioEngine.isRunning else { return }
+        audioEngine.prepare()
+        do {
+            try audioEngine.start()
+        } catch {
+            throw MetronomeEngineError.startFailed(error.localizedDescription)
+        }
+    }
+
     private func prepareAudioGraph(clickSettings: ClickSoundSettings) throws {
-        sampleRate = audioEngine.outputNode.outputFormat(forBus: 0).sampleRate
-        guard sampleRate > 0,
-              let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1) else {
+        let outputSampleRate = audioEngine.outputNode.outputFormat(forBus: 0).sampleRate
+        guard outputSampleRate > 0,
+              let format = AVAudioFormat(standardFormatWithSampleRate: outputSampleRate, channels: 1) else {
             throw MetronomeEngineError.audioFormatUnavailable
         }
 
-        if !isGraphConnected {
+        let formatChanged = sampleRate != outputSampleRate
+        sampleRate = outputSampleRate
+        if !isGraphConnected || formatChanged {
             audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: format)
             audioEngine.connect(positionPlayerNode, to: audioEngine.mainMixerNode, format: format)
             isGraphConnected = true
+        }
+
+        let waveformChanged = preparedClickSettings.map {
+            $0.normalFrequency != clickSettings.normalFrequency
+                || $0.accentFrequency != clickSettings.accentFrequency
+                || $0.soundType != clickSettings.soundType
+        } ?? true
+        guard formatChanged || waveformChanged
+                || normalClickBuffer == nil || accentClickBuffer == nil else {
+            self.clickSettings = clickSettings
+            preparedClickSettings = clickSettings
+            playerNode.volume = Float(clickSettings.volume)
+            return
         }
 
         do {
@@ -366,6 +412,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             muteBuffer = try makeMuteBuffer(format: format)
             positionMarkerBuffer = muteBuffer
             self.clickSettings = clickSettings
+            preparedClickSettings = clickSettings
             playerNode.volume = Float(clickSettings.volume)
         } catch {
             throw MetronomeEngineError.startFailed(error.localizedDescription)
@@ -396,6 +443,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             normalClickBuffer = newNormalBuffer
             accentClickBuffer = newAccentBuffer
             clickFrameCount = AVAudioFramePosition(newNormalBuffer.frameLength)
+            preparedClickSettings = settings
         }
 
         clickSettings = settings
@@ -499,7 +547,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         do {
             try scheduleSteps(count: 1, firstBufferOptions: [])
         } catch {
-            stopImmediately()
+            stopPlaybackImmediately()
         }
     }
 
@@ -570,7 +618,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         return buffer
     }
 
-    private func stopImmediately() {
+    private func stopPlaybackImmediately() {
         isRunning = false
         isPreviewing = false
         generation += 1
@@ -578,30 +626,18 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         playerNode.reset()
         positionPlayerNode.stop()
         positionPlayerNode.reset()
-        scheduledSteps.removeAll(keepingCapacity: false)
+        scheduledSteps.removeAll(keepingCapacity: true)
         lastCompletedStep = nil
-        normalClickBuffer = nil
-        accentClickBuffer = nil
-        muteBuffer = nil
-        positionMarkerBuffer = nil
         transitionSilenceBuffer = nil
-        clickFrameCount = 0
-        audioEngine.stop()
         positionReporter.end()
-        deactivateAudioSessionIfNeeded()
-    }
-
-    private func configureAudioSessionIfNeeded() throws {
-        try sessionCoordinator.beginPlayback()
-    }
-
-    private func deactivateAudioSessionIfNeeded() {
-        sessionCoordinator.endPlayback()
     }
 }
 
 nonisolated protocol MetronomeEngineProtocol: Sendable {
+    func prepare(clickSettings: ClickSoundSettings)
+
     func start(
+        actionUptime: TimeInterval,
         bpm: Int,
         timeSignature: TimeSignature,
         subdivision: Subdivision,

@@ -3,6 +3,18 @@ import XCTest
 
 @MainActor
 final class MetronomeViewModelTests: XCTestCase {
+    func testAudioIsPreparedOnceBeforePlaybackAndNotForEachStart() {
+        let engine = MetronomeEngineSpy()
+        let viewModel = makeViewModel(engine: engine)
+
+        XCTAssertEqual(engine.preparedSettings, [viewModel.clickSoundSettings])
+        viewModel.toggleRunning()
+        viewModel.toggleRunning()
+        viewModel.toggleRunning()
+        XCTAssertEqual(engine.preparedSettings.count, 1)
+        XCTAssertEqual(engine.starts.count, 2)
+    }
+
     func testSetBPMCommitsSliderResultOnce() {
         let engine = MetronomeEngineSpy()
         let viewModel = makeViewModel(engine: engine)
@@ -136,6 +148,8 @@ final class MetronomeViewModelTests: XCTestCase {
         viewModel.toggleRunning()
 
         XCTAssertEqual(engine.starts.last?.clickSettings, viewModel.clickSoundSettings)
+        XCTAssertEqual(engine.preparedSettings.last, viewModel.clickSoundSettings)
+        XCTAssertEqual(engine.preparedSettings.count, 5)
     }
 
     func testSubdivisionAndPatternArePassedToRunningEngine() {
@@ -256,9 +270,15 @@ nonisolated private final class MetronomeEngineSpy: MetronomeEngineProtocol, @un
     private(set) var starts: [Request] = []
     private(set) var updates: [Request] = []
     private(set) var clickSettingsUpdates: [ClickSoundSettings] = []
+    private(set) var preparedSettings: [ClickSoundSettings] = []
     private var positionHandler: MetronomeEngine.PositionHandler?
 
+    func prepare(clickSettings: ClickSoundSettings) {
+        preparedSettings.append(clickSettings)
+    }
+
     func start(
+        actionUptime: TimeInterval,
         bpm: Int,
         timeSignature: TimeSignature,
         subdivision: Subdivision,

@@ -64,6 +64,7 @@ final class MetronomeViewModel: ObservableObject {
         selectedSubdivision = settings.subdivision
         accentPatterns = settings.accentPatterns
         self.screenAwakeController.setPreventSleep(false)
+        metronomeEngine.prepare(clickSettings: settings.clickSoundSettings)
     }
 
     func adjustBPM(by amount: Int) {
@@ -71,6 +72,7 @@ final class MetronomeViewModel: ObservableObject {
     }
 
     func toggleRunning() {
+        let actionUptime = ProcessInfo.processInfo.systemUptime
         playbackRequestID += 1
 
         if isRunning {
@@ -83,6 +85,7 @@ final class MetronomeViewModel: ObservableObject {
         audioErrorMessage = nil
         setRunning(true)
         metronomeEngine.start(
+            actionUptime: actionUptime,
             bpm: bpm,
             timeSignature: selectedTimeSignature,
             subdivision: selectedSubdivision,
@@ -193,7 +196,10 @@ final class MetronomeViewModel: ObservableObject {
         clickSoundSettings = settings
         persistSettings()
 
-        guard isRunning else { return }
+        guard isRunning else {
+            metronomeEngine.prepare(clickSettings: settings)
+            return
+        }
         let requestID = playbackRequestID
         metronomeEngine.updateClickSettings(settings) { [weak self] error in
             guard let self, playbackRequestID == requestID else { return }
