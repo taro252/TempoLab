@@ -117,13 +117,16 @@ struct MetronomeView: View {
         amount: Int,
         compact: Bool
     ) -> some View {
-        Button(title) {
+        Button {
             adjustBPM(by: amount)
+        } label: {
+            Text(title)
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: compact ? 38 : 42)
+                .background(Color("AppSurface"), in: RoundedRectangle(cornerRadius: 11))
+                .contentShape(Rectangle())
         }
-        .font(.subheadline.weight(.semibold).monospacedDigit())
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity, minHeight: compact ? 38 : 42)
-        .background(Color("AppSurface"), in: RoundedRectangle(cornerRadius: 11))
         .buttonStyle(.plain)
         .accessibilityLabel("BPMを\(abs(amount))\(amount < 0 ? "下げる" : "上げる")")
     }

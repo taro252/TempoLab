@@ -109,6 +109,7 @@ struct CompactMeterControls: View {
                                             .fill(Color("AppAccent"))
                                     }
                                 }
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(option.accessibilityLabel)
