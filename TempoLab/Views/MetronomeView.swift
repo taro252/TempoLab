@@ -6,6 +6,11 @@ struct MetronomeView: View {
     @State private var isShowingClickSettings = false
     @State private var isShowingPatternEditor = false
     @State private var isShowingTempoDetector = false
+#if os(iOS)
+    @State private var isShowingBPMInput = false
+    @State private var bpmDraftText = ""
+    @FocusState private var isBPMInputFocused: Bool
+#endif
 
     var body: some View {
         ZStack {
@@ -35,7 +40,8 @@ struct MetronomeView: View {
                     BPMDisplayView(
                         bpm: viewModel.bpm,
                         compact: compact,
-                        onCommit: viewModel.setBPM
+                        onCommit: viewModel.setBPM,
+                        onRequestEditing: beginBPMInput
                     )
 
                     BPMControlView(
@@ -73,6 +79,12 @@ struct MetronomeView: View {
                 .frame(maxWidth: 640, maxHeight: .infinity)
                 .frame(maxWidth: .infinity)
             }
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+#if os(iOS)
+            if isShowingBPMInput {
+                bpmInputDialog
+            }
+#endif
         }
         .tint(Color("AppAccent"))
         .preferredColorScheme(.dark)
@@ -106,6 +118,69 @@ struct MetronomeView: View {
             )
         }
     }
+
+    private func beginBPMInput() {
+#if os(iOS)
+        bpmDraftText = String(viewModel.bpm)
+        isShowingBPMInput = true
+#endif
+    }
+
+#if os(iOS)
+    private var bpmInputDialog: some View {
+        ZStack {
+            Color.black.opacity(0.58)
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                Text("BPMを入力")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+
+                TextField("BPM", text: $bpmDraftText)
+                    .keyboardType(.numberPad)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.center)
+                    .font(.title2.monospacedDigit())
+                    .focused($isBPMInputFocused)
+                    .accessibilityLabel("Tempo")
+
+                Text("30〜300 BPM")
+                    .font(.caption)
+                    .foregroundStyle(Color("AppSecondaryText"))
+
+                HStack(spacing: 12) {
+                    Button("キャンセル", action: dismissBPMInput)
+                        .frame(maxWidth: .infinity)
+                    Button("OK", action: commitBPMInput)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(20)
+            .frame(maxWidth: 320)
+            .background(
+                Color(red: 0.10, green: 0.13, blue: 0.22),
+                in: RoundedRectangle(cornerRadius: 18)
+            )
+            .padding(.horizontal, 24)
+        }
+        .onAppear { isBPMInputFocused = true }
+    }
+
+    private func commitBPMInput() {
+        let newBPM = BPMInputParser.parse(bpmDraftText)
+        dismissBPMInput()
+        if let newBPM {
+            viewModel.setBPM(newBPM)
+        }
+    }
+
+    private func dismissBPMInput() {
+        isBPMInputFocused = false
+        isShowingBPMInput = false
+    }
+#endif
 
     private func bpmAdjustmentButtons(compact: Bool) -> some View {
         HStack(spacing: 8) {

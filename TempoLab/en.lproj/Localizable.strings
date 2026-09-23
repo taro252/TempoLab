@@ -20,6 +20,9 @@
 "オーディオエラー" = "Audio Error";
 "不明なエラーが発生しました。" = "An unknown error occurred.";
 "OK" = "OK";
+"BPMを入力" = "Enter BPM";
+"キャンセル" = "Cancel";
+"ダブルタップしてBPMを入力" = "Double tap to enter BPM";
 
 /* Settings */
 "完了" = "Done";

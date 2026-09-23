@@ -54,6 +54,29 @@ final class MetronomeTimingTests: XCTestCase {
         )
     }
 
+    func testLookAheadCoversKeyboardPresentationAtMaximumTempo() {
+        let count = MetronomeTiming.lookAheadStepCount(
+            bpm: 300,
+            subdivision: .sixteenth,
+            minimumBeats: 2,
+            minimumSeconds: 0.6
+        )
+        XCTAssertEqual(count, 12)
+        XCTAssertEqual(Double(count) * 60 / (300 * 4), 0.6, accuracy: 0.001)
+    }
+
+    func testLookAheadRetainsTwoBeatsAtSlowerTempos() {
+        XCTAssertEqual(
+            MetronomeTiming.lookAheadStepCount(
+                bpm: 120,
+                subdivision: .quarter,
+                minimumBeats: 2,
+                minimumSeconds: 0.6
+            ),
+            2
+        )
+    }
+
     func testLongTermSubdivisionPositionDoesNotAccumulateRoundedIntervalError() {
         let index: Int64 = 100_000
         let sampleRate = 44_100.0

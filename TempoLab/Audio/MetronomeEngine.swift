@@ -29,8 +29,12 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     #if DEBUG
     private let startLogger = Logger(subsystem: "jp.taro252.TempoLab", category: "MetronomeStart")
     #endif
-    private let schedulingQueue = DispatchQueue(label: "jp.taro252.TempoLab.metronome-scheduling")
-    private let lookAheadBeatCount = 2
+    private let schedulingQueue = DispatchQueue(
+        label: "jp.taro252.TempoLab.metronome-scheduling",
+        qos: .userInteractive
+    )
+    private let minimumLookAheadBeats = 2
+    private let minimumLookAheadSeconds = 0.6
     private let schedulingLeadFrameCount: AVAudioFramePosition = 512
 
     private var isRunning = false
@@ -237,7 +241,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         generation += 1
 
         try scheduleSteps(
-            count: lookAheadBeatCount * subdivision.divisionsPerBeat,
+            count: lookAheadStepCount,
             firstBufferOptions: []
         )
         #if DEBUG
@@ -336,13 +340,13 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             )
             try interruptPositionMarkers(at: clearTime)
             try scheduleSteps(
-                count: lookAheadBeatCount * subdivision.divisionsPerBeat,
+                count: lookAheadStepCount,
                 firstBufferOptions: []
             )
         } else {
             transitionSilenceBuffer = nil
             try scheduleSteps(
-                count: lookAheadBeatCount * subdivision.divisionsPerBeat,
+                count: lookAheadStepCount,
                 firstBufferOptions: .interrupts
             )
         }
@@ -536,6 +540,15 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                 )
             }
         }
+    }
+
+    private var lookAheadStepCount: Int {
+        MetronomeTiming.lookAheadStepCount(
+            bpm: bpm,
+            subdivision: subdivision,
+            minimumBeats: minimumLookAheadBeats,
+            minimumSeconds: minimumLookAheadSeconds
+        )
     }
 
     private func stepDidComplete(_ step: ScheduledStep, generation: Int) {

@@ -42,11 +42,10 @@ struct BPMDisplayView: View {
     let bpm: Int
     let compact: Bool
     let onCommit: (Int) -> Void
+    let onRequestEditing: () -> Void
 
+#if os(macOS)
     @State private var draftBPM = ""
-#if os(iOS)
-    @State private var isShowingInputDialog = false
-#elseif os(macOS)
     @State private var isEditing = false
     @FocusState private var isInputFocused: Bool
 #endif
@@ -77,16 +76,6 @@ struct BPMDisplayView: View {
                 .tracking(2.5)
                 .foregroundStyle(Color("AppSecondaryText"))
         }
-#if os(iOS)
-        .alert("BPMを入力", isPresented: $isShowingInputDialog) {
-            TextField("BPM", text: $draftBPM)
-                .keyboardType(.numberPad)
-            Button("キャンセル", role: .cancel) {}
-            Button("OK", action: commitDraftBPM)
-        } message: {
-            Text("30〜300 BPM")
-        }
-#endif
     }
 
     private var bpmButton: some View {
@@ -122,10 +111,10 @@ struct BPMDisplayView: View {
 #endif
 
     private func beginEditing() {
-        draftBPM = String(bpm)
 #if os(iOS)
-        isShowingInputDialog = true
+        onRequestEditing()
 #elseif os(macOS)
+        draftBPM = String(bpm)
         isEditing = true
 #endif
     }
@@ -142,13 +131,13 @@ struct BPMDisplayView: View {
         isEditing = false
         isInputFocused = false
     }
-#endif
 
     private func commitDraftBPM() {
         if let newBPM = BPMInputParser.parse(draftBPM) {
             onCommit(newBPM)
         }
     }
+#endif
 }
 
 struct CompactMeterControls: View {

@@ -21,6 +21,20 @@ nonisolated enum MetronomeTiming {
             / Double(subdivision.divisionsPerBeat)
     }
 
+    static func lookAheadStepCount(
+        bpm: Int,
+        subdivision: Subdivision,
+        minimumBeats: Int,
+        minimumSeconds: Double
+    ) -> Int {
+        precondition(bpm > 0 && minimumBeats > 0 && minimumSeconds > 0)
+        let stepsPerBeat = subdivision.divisionsPerBeat
+        let stepsForDuration = Int(
+            ceil(minimumSeconds * Double(bpm * stepsPerBeat) / 60)
+        )
+        return max(minimumBeats * stepsPerBeat, stepsForDuration)
+    }
+
     static func samplePosition(
         forSubdivision subdivisionIndex: Int64,
         bpm: Int,

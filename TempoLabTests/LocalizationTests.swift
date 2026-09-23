@@ -13,6 +13,16 @@ final class LocalizationTests: XCTestCase {
                        "Microphone access is needed to analyze the tempo of your performance.")
     }
 
+    func testEnglishIsTheDevelopmentLanguageAndInputDialogIsTranslated() throws {
+        XCTAssertEqual(Bundle.main.infoDictionary?["CFBundleDevelopmentRegion"] as? String, "en")
+
+        let english = try languageBundle("en")
+        let japanese = try languageBundle("ja")
+        XCTAssertEqual(english.localizedString(forKey: "BPMを入力", value: nil, table: "Localizable"), "Enter BPM")
+        XCTAssertEqual(english.localizedString(forKey: "キャンセル", value: nil, table: "Localizable"), "Cancel")
+        XCTAssertEqual(japanese.localizedString(forKey: "BPMを入力", value: nil, table: "Localizable"), "BPMを入力")
+    }
+
     private func languageBundle(_ language: String) throws -> Bundle {
         let path = try XCTUnwrap(Bundle.main.path(forResource: language, ofType: "lproj"))
         return try XCTUnwrap(Bundle(path: path))
