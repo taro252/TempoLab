@@ -41,23 +41,113 @@ struct MetronomeTopBar: View {
 struct BPMDisplayView: View {
     let bpm: Int
     let compact: Bool
+    let onCommit: (Int) -> Void
+
+    @State private var draftBPM = ""
+#if os(iOS)
+    @State private var isShowingInputDialog = false
+#elseif os(macOS)
+    @State private var isEditing = false
+    @FocusState private var isInputFocused: Bool
+#endif
+
+    private var bpmFont: Font {
+        .system(size: compact ? 58 : 82, weight: .bold, design: .rounded)
+    }
 
     var body: some View {
         VStack(spacing: compact ? -3 : 0) {
-            Text(bpm, format: .number)
-                .font(.system(size: compact ? 58 : 82, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(.white)
-                .contentTransition(.numericText(value: Double(bpm)))
+            Group {
+#if os(macOS)
+                if isEditing {
+                    bpmInput
+                } else {
+                    bpmButton
+                }
+#else
+                bpmButton
+#endif
+            }
+            .font(bpmFont)
+            .monospacedDigit()
+            .foregroundStyle(.white)
 
             Text("BPM")
                 .font(.caption.weight(.semibold))
                 .tracking(2.5)
                 .foregroundStyle(Color("AppSecondaryText"))
         }
-        .accessibilityElement(children: .ignore)
+#if os(iOS)
+        .alert("BPMを入力", isPresented: $isShowingInputDialog) {
+            TextField("BPM", text: $draftBPM)
+                .keyboardType(.numberPad)
+            Button("キャンセル", role: .cancel) {}
+            Button("OK", action: commitDraftBPM)
+        } message: {
+            Text("30〜300 BPM")
+        }
+#endif
+    }
+
+    private var bpmButton: some View {
+        Button(action: beginEditing) {
+            Text(bpm, format: .number)
+                .contentTransition(.numericText(value: Double(bpm)))
+                .frame(width: compact ? 200 : 280)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
         .accessibilityLabel("Tempo")
         .accessibilityValue("\(bpm) BPM")
+        .accessibilityHint("ダブルタップしてBPMを入力")
+    }
+
+#if os(macOS)
+    private var bpmInput: some View {
+        TextField("BPM", text: $draftBPM)
+            .textFieldStyle(.plain)
+            .multilineTextAlignment(.center)
+            .frame(width: compact ? 200 : 280)
+            .focused($isInputFocused)
+            .onSubmit(commitBPM)
+            .onChange(of: isInputFocused) { _, focused in
+                if !focused && isEditing {
+                    commitBPM()
+                }
+            }
+            .onAppear { isInputFocused = true }
+            .accessibilityLabel("Tempo")
+            .onExitCommand(perform: cancelEditing)
+    }
+#endif
+
+    private func beginEditing() {
+        draftBPM = String(bpm)
+#if os(iOS)
+        isShowingInputDialog = true
+#elseif os(macOS)
+        isEditing = true
+#endif
+    }
+
+#if os(macOS)
+    private func commitBPM() {
+        guard isEditing else { return }
+        isEditing = false
+        isInputFocused = false
+        commitDraftBPM()
+    }
+
+    private func cancelEditing() {
+        isEditing = false
+        isInputFocused = false
+    }
+#endif
+
+    private func commitDraftBPM() {
+        if let newBPM = BPMInputParser.parse(draftBPM) {
+            onCommit(newBPM)
+        }
     }
 }
 

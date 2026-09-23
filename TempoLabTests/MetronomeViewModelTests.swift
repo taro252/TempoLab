@@ -40,6 +40,33 @@ final class MetronomeViewModelTests: XCTestCase {
         XCTAssertTrue(engine.updates.isEmpty)
     }
 
+    func testDirectInputCommitUpdatesRunningEngineOnceAndPersistsWithoutResettingPosition() throws {
+        let engine = MetronomeEngineSpy()
+        let store = InMemorySettingsStore()
+        let viewModel = MetronomeViewModel(
+            metronomeEngine: engine,
+            settingsStore: store,
+            screenAwakeController: ScreenAwakeControllerSpy()
+        )
+        viewModel.toggleRunning()
+        let position = try XCTUnwrap(
+            PlaybackPosition(
+                stepIndex: 2,
+                timeSignature: .fourFour,
+                subdivision: .quarter
+            )
+        )
+        engine.report(position)
+
+        XCTAssertTrue(engine.updates.isEmpty)
+        viewModel.setBPM(try XCTUnwrap(BPMInputParser.parse("150")))
+
+        XCTAssertEqual(viewModel.bpm, 150)
+        XCTAssertEqual(engine.updates.map(\.bpm), [150])
+        XCTAssertEqual(viewModel.currentPlaybackPosition, position)
+        XCTAssertEqual(store.load().bpm, 150)
+    }
+
     func testBPMButtonUpdatesEngineImmediately() {
         let engine = MetronomeEngineSpy()
         let viewModel = makeViewModel(engine: engine)

@@ -32,7 +32,11 @@ struct MetronomeView: View {
 
                     Spacer(minLength: compact ? 0 : 2)
 
-                    BPMDisplayView(bpm: viewModel.bpm, compact: compact)
+                    BPMDisplayView(
+                        bpm: viewModel.bpm,
+                        compact: compact,
+                        onCommit: viewModel.setBPM
+                    )
 
                     BPMControlView(
                         bpm: viewModel.bpm,
