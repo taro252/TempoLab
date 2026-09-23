@@ -8,8 +8,7 @@ struct MetronomeView: View {
     @State private var isShowingTempoDetector = false
 #if os(iOS)
     @State private var isShowingBPMInput = false
-    @State private var bpmDraftText = ""
-    @FocusState private var isBPMInputFocused: Bool
+    @State private var bpmDraft = BPMNumericDraft(bpm: 120)
 #endif
 
     var body: some View {
@@ -81,9 +80,10 @@ struct MetronomeView: View {
             }
             .ignoresSafeArea(.keyboard, edges: .bottom)
 #if os(iOS)
-            if isShowingBPMInput {
-                bpmInputDialog
-            }
+            bpmInputDialog
+                .opacity(isShowingBPMInput ? 1 : 0)
+                .allowsHitTesting(isShowingBPMInput)
+                .accessibilityHidden(!isShowingBPMInput)
 #endif
         }
         .tint(Color("AppAccent"))
@@ -121,7 +121,7 @@ struct MetronomeView: View {
 
     private func beginBPMInput() {
 #if os(iOS)
-        bpmDraftText = String(viewModel.bpm)
+        bpmDraft = BPMNumericDraft(bpm: viewModel.bpm)
         isShowingBPMInput = true
 #endif
     }
@@ -132,44 +132,91 @@ struct MetronomeView: View {
             Color.black.opacity(0.58)
                 .ignoresSafeArea()
 
-            VStack(spacing: 16) {
+            VStack(spacing: 14) {
                 Text("BPMを入力")
                     .font(.headline)
                     .foregroundStyle(.white)
 
-                TextField("BPM", text: $bpmDraftText)
-                    .keyboardType(.numberPad)
-                    .textFieldStyle(.roundedBorder)
-                    .multilineTextAlignment(.center)
-                    .font(.title2.monospacedDigit())
-                    .focused($isBPMInputFocused)
+                Text(bpmDraft.text.isEmpty ? "—" : bpmDraft.text)
+                    .font(.system(size: 46, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .frame(maxWidth: .infinity, minHeight: 62)
+                    .foregroundStyle(.white)
                     .accessibilityLabel("Tempo")
+                    .accessibilityValue(
+                        bpmDraft.text.isEmpty ? String(localized: "空欄") : "\(bpmDraft.text) BPM"
+                    )
 
                 Text("30〜300 BPM")
                     .font(.caption)
                     .foregroundStyle(Color("AppSecondaryText"))
 
-                HStack(spacing: 12) {
-                    Button("キャンセル", action: dismissBPMInput)
-                        .frame(maxWidth: .infinity)
-                    Button("OK", action: commitBPMInput)
-                        .frame(maxWidth: .infinity)
+                VStack(spacing: 8) {
+                    digitRow([1, 2, 3])
+                    digitRow([4, 5, 6])
+                    digitRow([7, 8, 9])
+                    HStack(spacing: 8) {
+                        keypadButton(String(localized: "削除"), systemImage: "delete.left") {
+                            bpmDraft.delete()
+                        }
+                        keypadButton("0") { bpmDraft.append(0) }
+                        keypadButton(String(localized: "Done"), isProminent: true, action: commitBPMInput)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
+
+                Button("キャンセル", action: dismissBPMInput)
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .buttonStyle(.plain)
             }
-            .padding(20)
+            .padding(18)
             .frame(maxWidth: 320)
             .background(
-                Color(red: 0.10, green: 0.13, blue: 0.22),
+                Color(red: 0.10, green: 0.13, blue: 0.22, opacity: 0.9),
                 in: RoundedRectangle(cornerRadius: 18)
             )
+            .background(Color("AppBackground"), in: RoundedRectangle(cornerRadius: 18))
             .padding(.horizontal, 24)
         }
-        .onAppear { isBPMInputFocused = true }
+    }
+
+    private func digitRow(_ digits: [Int]) -> some View {
+        HStack(spacing: 8) {
+            ForEach(digits, id: \.self) { digit in
+                keypadButton("\(digit)") { bpmDraft.append(digit) }
+            }
+        }
+    }
+
+    private func keypadButton(
+        _ title: String,
+        systemImage: String? = nil,
+        isProminent: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Group {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                } else {
+                    Text(title)
+                }
+            }
+            .font(.title3.weight(.semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .background(
+                isProminent ? Color("AppAccent") : Color("AppSurface"),
+                in: RoundedRectangle(cornerRadius: 10)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
     }
 
     private func commitBPMInput() {
-        let newBPM = BPMInputParser.parse(bpmDraftText)
+        let newBPM = BPMInputParser.parse(bpmDraft.text)
         dismissBPMInput()
         if let newBPM {
             viewModel.setBPM(newBPM)
@@ -177,7 +224,6 @@ struct MetronomeView: View {
     }
 
     private func dismissBPMInput() {
-        isBPMInputFocused = false
         isShowingBPMInput = false
     }
 #endif

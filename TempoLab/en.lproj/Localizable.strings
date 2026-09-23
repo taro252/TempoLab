@@ -23,6 +23,9 @@
 "BPMを入力" = "Enter BPM";
 "キャンセル" = "Cancel";
 "ダブルタップしてBPMを入力" = "Double tap to enter BPM";
+"削除" = "Delete";
+"空欄" = "Empty";
+"Done" = "Done";
 
 /* Settings */
 "完了" = "Done";
