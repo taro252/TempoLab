@@ -23,6 +23,35 @@ final class BPMDialMathTests: XCTestCase {
         XCTAssertEqual(calculatedBPM(startBPM: 300, translation: -120), 300)
     }
 
+    func testVisibleTicksFollowRenderedPositionDuringDirectBPMChange() {
+        let width = 360.0
+
+        // The model may already be 90 while the ruler still renders at 122.
+        let beforeVisualUpdate = BPMDialMath.visibleRange(
+            centeredAt: 122,
+            width: width,
+            pointsPerBPM: pointsPerBPM,
+            range: range
+        )
+        XCTAssertTrue(beforeVisualUpdate.contains(122))
+
+        let afterVisualUpdate = BPMDialMath.visibleRange(
+            centeredAt: 90,
+            width: width,
+            pointsPerBPM: pointsPerBPM,
+            range: range
+        )
+        XCTAssertTrue(afterVisualUpdate.contains(90))
+        XCTAssertEqual(afterVisualUpdate, 73...107)
+    }
+
+    func testStaleButtonAnimationDoesNotSuppressDirectBPMChange() {
+        let previousButtonAnimation = BPMAnimationRequest(id: 1, fromBPM: 85, toBPM: 90)
+
+        XCTAssertFalse(previousButtonAnimation.matchesTransition(from: 122, to: 90))
+        XCTAssertTrue(previousButtonAnimation.matchesTransition(from: 85, to: 90))
+    }
+
     func testLowerBoundaryStopsBPMAndVisualTranslation() {
         var state = BPMDragState(startBPM: 35)
 

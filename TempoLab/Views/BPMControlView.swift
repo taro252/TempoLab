@@ -12,6 +12,21 @@ nonisolated enum BPMDialMath {
         let bpmOffset = Int((-translation / pointsPerBPM).rounded())
         return min(max(startBPM + bpmOffset, range.lowerBound), range.upperBound)
     }
+
+    static func visibleRange(
+        centeredAt visualBPM: Double,
+        width: Double,
+        pointsPerBPM: Double,
+        range: ClosedRange<Int>
+    ) -> ClosedRange<Int> {
+        precondition(pointsPerBPM > 0)
+
+        let visibleRadius = Int(ceil(width / (2 * pointsPerBPM))) + 2
+        let centerBPM = Int(visualBPM.rounded())
+        let lowerBPM = max(centerBPM - visibleRadius, range.lowerBound)
+        let upperBPM = min(centerBPM + visibleRadius, range.upperBound)
+        return lowerBPM...upperBPM
+    }
 }
 
 nonisolated struct BPMDragState: Equatable {
@@ -53,6 +68,10 @@ nonisolated struct BPMAnimationRequest: Equatable {
     let id: Int
     let fromBPM: Int
     let toBPM: Int
+
+    func matchesTransition(from oldBPM: Int, to newBPM: Int) -> Bool {
+        fromBPM == oldBPM && toBPM == newBPM
+    }
 }
 
 nonisolated enum BPMHapticStrength: Equatable {
@@ -125,11 +144,21 @@ struct BPMControlView: View {
         dragBPM ?? bpm
     }
 
+    private var rulerCenterBPM: Double {
+        if let dragState {
+            return Double(dragState.startBPM)
+                - dragState.visualTranslation / Double(pointsPerBPM)
+        }
+        return visualBPM
+    }
+
     var body: some View {
         ruler
-        .onChange(of: bpm) { _, newBPM in
+        .onChange(of: bpm) { oldBPM, newBPM in
             guard dragState == nil else { return }
-            guard animationRequest?.toBPM != newBPM else { return }
+            guard animationRequest?.matchesTransition(from: oldBPM, to: newBPM) != true else {
+                return
+            }
             visualBPM = Double(newBPM)
         }
         .onChange(of: animationRequest) { _, request in
@@ -168,9 +197,12 @@ struct BPMControlView: View {
             let tickY: CGFloat = compact ? 25 : 31
             let indicatorY: CGFloat = compact ? 34 : 44
             let markerY: CGFloat = compact ? 55 : 67
-            let visibleRadius = Int(ceil(geometry.size.width / (2 * pointsPerBPM))) + 2
-            let lowerBPM = max(displayedBPM - visibleRadius, range.lowerBound)
-            let upperBPM = min(displayedBPM + visibleRadius, range.upperBound)
+            let visibleRange = BPMDialMath.visibleRange(
+                centeredAt: rulerCenterBPM,
+                width: Double(geometry.size.width),
+                pointsPerBPM: Double(pointsPerBPM),
+                range: range
+            )
 
             ZStack {
                 Rectangle()
@@ -178,7 +210,7 @@ struct BPMControlView: View {
                     .frame(height: 1)
                     .position(x: centerX, y: trackY)
 
-                ForEach(lowerBPM...upperBPM, id: \.self) { tickBPM in
+                ForEach(visibleRange, id: \.self) { tickBPM in
                     tick(for: tickBPM)
                         .position(
                             x: tickPosition(
