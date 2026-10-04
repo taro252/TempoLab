@@ -300,6 +300,7 @@ struct MetronomeTransportControls: View {
             tint: isRunning ? Color("AppRunning") : Color("AppAccent"),
             isProminent: true,
             circularDiameter: buttonDiameter,
+            keyboardShortcut: KeyboardShortcut(.space, modifiers: []),
             action: onTogglePlayback
         ) {
             VStack(spacing: 5) {
@@ -321,7 +322,6 @@ struct MetronomeTransportControls: View {
     private var tapTempoButton: some View {
         ImmediateButton(
             tint: Color("AppAccent"),
-            keyboardShortcut: KeyboardShortcut(.space, modifiers: []),
             action: onTapTempo
         ) {
             Text("TAP TEMPO")

@@ -253,6 +253,10 @@ struct MetronomeView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .keyboardShortcut(
+            amount < 0 ? .leftArrow : .rightArrow,
+            modifiers: abs(amount) == 5 ? [.command] : []
+        )
         .accessibilityLabel(
             String(
                 format: String(localized: amount < 0 ? "BPMを%d下げる" : "BPMを%d上げる"),
