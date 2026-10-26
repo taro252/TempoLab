@@ -25,7 +25,7 @@ nonisolated final class AudioInputEngine: AudioInputEngineProtocol, @unchecked S
 
     private let audioEngine = AVAudioEngine()
     private let sessionCoordinator: AudioSessionCoordinator
-    private let controlQueue = DispatchQueue(label: "jp.taro252.TempoLab.audio-input-control")
+    private let controlQueue = DispatchQueue(label: "app.merodoa.PiTempo.audio-input-control")
     private var tapIsInstalled = false
     private var isListening = false
     private var notificationTokens: [NSObjectProtocol] = []

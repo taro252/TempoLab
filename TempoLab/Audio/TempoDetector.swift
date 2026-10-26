@@ -11,7 +11,7 @@ nonisolated protocol TempoDetecting: AnyObject, Sendable {
 
 nonisolated final class TempoDetector: TempoDetecting, @unchecked Sendable {
     private let ringBuffer = PCMFloatRingBuffer(capacity: 262_144)
-    private let dspQueue = DispatchQueue(label: "jp.taro252.TempoLab.tempo-dsp", qos: .userInitiated)
+    private let dspQueue = DispatchQueue(label: "app.merodoa.PiTempo.tempo-dsp", qos: .userInitiated)
     private let schedulingLock = NSLock()
     private let analyzer: TempoDetectorDSP
     private var drainIsScheduled = false

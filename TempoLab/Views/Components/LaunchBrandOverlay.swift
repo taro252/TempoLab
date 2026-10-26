@@ -15,7 +15,7 @@ struct LaunchBrandOverlay: View {
                     .scaledToFit()
                     .frame(width: 112, height: 112)
 
-                Text("TempoLab")
+                Text("Pi:Tempo")
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundStyle(.white)
             }

@@ -27,10 +27,10 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     private let positionReporter = PlaybackPositionReporter()
     private let sessionCoordinator = AudioSessionCoordinator.shared
     #if DEBUG
-    private let startLogger = Logger(subsystem: "jp.taro252.TempoLab", category: "MetronomeStart")
+    private let startLogger = Logger(subsystem: "app.merodoa.PiTempo", category: "MetronomeStart")
     #endif
     private let schedulingQueue = DispatchQueue(
-        label: "jp.taro252.TempoLab.metronome-scheduling",
+        label: "app.merodoa.PiTempo.metronome-scheduling",
         qos: .userInteractive
     )
     private let minimumLookAheadBeats = 2

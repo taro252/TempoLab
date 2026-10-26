@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="TempoLab/Assets.xcassets/AppIconWizoutBg.imageset/AppIconWizoutBg.png" width="144" alt="TempoLab icon">
+  <img src="TempoLab/Assets.xcassets/AppIconWizoutBg.imageset/AppIconWizoutBg.png" width="144" alt="Pi:Tempo icon">
 
-  <h1>TempoLab</h1>
+  <h1>Pi:Tempo</h1>
 
   <p>iPhone・iPad・Macで使える、楽器練習向けのネイティブメトロノーム。</p>
   <p><em>A sample-accurate metronome and tempo detection app built with SwiftUI.</em></p>
@@ -9,7 +9,7 @@
 
 ## 概要
 
-TempoLabは、演奏中でも素早く正確に操作できることを目指したメトロノームアプリです。
+Pi:Tempoは、演奏中でも素早く正確に操作できることを目指したメトロノームアプリです。
 
 `AVAudioEngine`と`AVAudioPlayerNode`を使用したサンプル単位のクリック予約、Tap Tempo、アクセントパターン、クリック音のカスタマイズ、マイク入力からの自動テンポ検出を備えています。
 
@@ -72,6 +72,8 @@ TempoLabは、演奏中でも素早く正確に操作できることを目指し
 - Swift 5
 
 プロジェクトのDeployment Targetに合わせた値です。利用するXcodeによっては、署名チームやBundle Identifierの変更が必要です。
+
+アプリ表示名は `Pi:Tempo`、Bundle Identifier（アプリを識別するID）は `app.merodoa.PiTempo` です。生成されるアプリは `PiTempo.app` です。既存のリポジトリ名、プロジェクト名、Scheme、ソースフォルダ、Swiftモジュール名には `TempoLab` を使用しています。
 
 ## セットアップ
 

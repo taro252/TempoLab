@@ -1,1 +1,3 @@
+"CFBundleDisplayName" = "Pi:Tempo";
+"CFBundleName" = "Pi:Tempo";
 "NSMicrophoneUsageDescription" = "Microphone access is needed to analyze the tempo of your performance.";

@@ -1,8 +1,11 @@
-# TempoLab Development Guidelines
+# Pi:Tempo Development Guidelines
 
 ## Project Overview
 
-TempoLab is a native metronome application for musicians.
+Pi:Tempo is a native metronome application for musicians.
+
+The bundle identifier is `app.merodoa.PiTempo`, and the built product is `PiTempo.app`.
+The repository, Xcode project, scheme, source folders, and Swift module retain the internal name `TempoLab`.
 
 The application targets:
 

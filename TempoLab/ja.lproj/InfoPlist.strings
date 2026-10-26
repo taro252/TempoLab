@@ -1,1 +1,3 @@
+"CFBundleDisplayName" = "Pi:Tempo";
+"CFBundleName" = "Pi:Tempo";
 "NSMicrophoneUsageDescription" = "演奏音のテンポ解析に使用するため、マイク入力へのアクセスが必要です。";

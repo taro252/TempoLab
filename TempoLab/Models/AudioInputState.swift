@@ -39,7 +39,7 @@ nonisolated enum AudioInputEngineError: Error, LocalizedError, Sendable {
     var errorDescription: String? {
         switch self {
         case .permissionDenied:
-            return String(localized: "マイクへのアクセスが許可されていません。システム設定でTempoLabのマイクアクセスを許可してください。")
+            return String(localized: "マイクへのアクセスが許可されていません。システム設定でPi:Tempoのマイクアクセスを許可してください。")
         case .inputFormatUnavailable:
             return String(localized: "利用可能なマイク入力形式を取得できませんでした。")
         case let .startFailed(message):

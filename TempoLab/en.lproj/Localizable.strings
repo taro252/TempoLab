@@ -1,5 +1,5 @@
 /* Main screen */
-"TempoLab" = "TempoLab";
+"Pi:Tempo" = "Pi:Tempo";
 "BPM" = "BPM";
 "Tempo" = "Tempo";
 "テンポ検出" = "Tempo Detection";
@@ -100,7 +100,7 @@
 "オーディオ構成の変更によりマイク入力を停止しました。" = "Microphone input stopped because the audio configuration changed.";
 
 /* Errors */
-"マイクへのアクセスが許可されていません。システム設定でTempoLabのマイクアクセスを許可してください。" = "Microphone access is not allowed. Enable it for TempoLab in System Settings.";
+"マイクへのアクセスが許可されていません。システム設定でPi:Tempoのマイクアクセスを許可してください。" = "Microphone access is not allowed. Enable it for Pi:Tempo in System Settings.";
 "利用可能なマイク入力形式を取得できませんでした。" = "Could not obtain an available microphone input format.";
 "マイク入力を開始できませんでした: %@" = "Could not start microphone input: %@";
 "利用可能なオーディオ形式を取得できませんでした。" = "Could not obtain an available audio format.";

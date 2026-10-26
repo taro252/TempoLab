@@ -8,7 +8,7 @@ final class SettingsStoreTests: XCTestCase {
 
     override func setUpWithError() throws {
         try super.setUpWithError()
-        suiteName = "jp.taro252.TempoLabTests.\(UUID().uuidString)"
+        suiteName = "app.merodoa.PiTempoTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
     }
 

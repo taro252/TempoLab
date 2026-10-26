@@ -6,7 +6,7 @@ struct MetronomeTopBar: View {
 
     var body: some View {
         HStack {
-            Text("TempoLab")
+            Text("Pi:Tempo")
                 .font(.headline.weight(.semibold))
                 .foregroundStyle(.white)
 
