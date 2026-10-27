@@ -106,3 +106,32 @@
 "利用可能なオーディオ形式を取得できませんでした。" = "Could not obtain an available audio format.";
 "メトロノームを開始できませんでした: %@" = "Could not start the metronome: %@";
 "再生中はプレビューできません。" = "Preview is unavailable during playback.";
+
+/* プリセット */
+"プリセット" = "Presets";
+"現在の設定を保存" = "Save Current Settings";
+"プリセット名" = "Preset Name";
+"名前変更" = "Rename";
+"上書き保存" = "Overwrite";
+"保存" = "Save";
+"変更あり" = "Modified";
+"適用中" = "Applied";
+"プリセットがありません" = "No Presets";
+"よく使うテンポや音色を保存して、ワンタップで呼び出せます。" = "Save your favorite tempos and sounds, then recall them with one tap.";
+"プリセットエラー" = "Preset Error";
+"現在の設定で上書き" = "Overwrite with Current Settings";
+"上に移動" = "Move Up";
+"下に移動" = "Move Down";
+"プリセットを呼び出します" = "Recall this preset";
+"%@の操作" = "Actions for %@";
+"保存する設定" = "Settings to Save";
+"プリセットを上書きしますか？" = "Overwrite Preset?";
+"プリセットを削除しますか？" = "Delete Preset?";
+"「%@」を現在の設定で上書きします。この操作は取り消せません。" = "Overwrite “%@” with the current settings? This cannot be undone.";
+"「%@」を削除します。この操作は取り消せません。" = "Delete “%@”? This cannot be undone.";
+"プリセット名を入力してください。" = "Enter a preset name.";
+"プリセットが見つかりません。" = "The preset could not be found.";
+"プリセットを読み込めませんでした。保存データは保持されています。" = "Presets could not be loaded. The saved data has been preserved.";
+"このバージョンでは読み込めないプリセットです。保存データは保持されています。" = "This preset format is not supported by this version. The saved data has been preserved.";
+"プリセットを保存できませんでした。" = "Presets could not be saved.";
+"一部のプリセットを読み込めませんでした。読み込めたプリセットを表示しています。" = "Some presets could not be loaded. Recovered presets are shown.";

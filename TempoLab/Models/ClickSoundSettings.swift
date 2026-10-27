@@ -60,6 +60,20 @@ nonisolated struct ClickSoundSettings: Codable, Equatable, Sendable {
         Self(normalFrequency: normalFrequency, accentFrequency: accentFrequency, volume: volume, soundType: value)
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case normalFrequency, accentFrequency, volume, soundType
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            normalFrequency: (try? values.decode(Int.self, forKey: .normalFrequency)) ?? Self.default.normalFrequency,
+            accentFrequency: (try? values.decode(Int.self, forKey: .accentFrequency)) ?? Self.default.accentFrequency,
+            volume: (try? values.decode(Double.self, forKey: .volume)) ?? Self.default.volume,
+            soundType: (try? values.decode(ClickSoundType.self, forKey: .soundType)) ?? Self.default.soundType
+        )
+    }
+
     private static func clamp(_ value: Int, to range: ClosedRange<Int>) -> Int {
         min(max(value, range.lowerBound), range.upperBound)
     }

@@ -23,6 +23,21 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(japanese.localizedString(forKey: "BPMを入力", value: nil, table: "Localizable"), "BPMを入力")
     }
 
+    func testPresetActionsAndErrorsAreLocalized() throws {
+        let english = try languageBundle("en")
+        let japanese = try languageBundle("ja")
+        let translations = [
+            "プリセット": "Presets", "現在の設定を保存": "Save Current Settings",
+            "プリセット名": "Preset Name", "名前変更": "Rename", "上書き保存": "Overwrite",
+            "変更あり": "Modified", "保存": "Save", "プリセットがありません": "No Presets",
+            "プリセットを保存できませんでした。": "Presets could not be saved."
+        ]
+        for (key, value) in translations {
+            XCTAssertEqual(english.localizedString(forKey: key, value: nil, table: "Localizable"), value)
+            XCTAssertEqual(japanese.localizedString(forKey: key, value: nil, table: "Localizable"), key)
+        }
+    }
+
     private func languageBundle(_ language: String) throws -> Bundle {
         let path = try XCTUnwrap(Bundle.main.path(forResource: language, ofType: "lproj"))
         return try XCTUnwrap(Bundle(path: path))

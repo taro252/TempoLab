@@ -20,7 +20,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     typealias StartHandler = @MainActor @Sendable (Result<Void, MetronomeEngineError>) -> Void
     typealias PositionHandler = PlaybackPositionReporter.Handler
 
-    private let audioEngine = AVAudioEngine()
+    private let audioEngine: AVAudioEngine
     private let playerNode = AVAudioPlayerNode()
     private let positionPlayerNode = AVAudioPlayerNode()
     private let soundGenerator = ClickSoundGenerator()
@@ -29,10 +29,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     #if DEBUG
     private let startLogger = Logger(subsystem: "app.merodoa.PiTempo", category: "MetronomeStart")
     #endif
-    private let schedulingQueue = DispatchQueue(
-        label: "app.merodoa.PiTempo.metronome-scheduling",
-        qos: .userInteractive
-    )
+    private let schedulingQueue: DispatchQueue
     private let minimumLookAheadBeats = 2
     private let minimumLookAheadSeconds = 0.6
     private let schedulingLeadFrameCount: AVAudioFramePosition = 512
@@ -61,7 +58,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     private var accentClickBuffer: AVAudioPCMBuffer?
     private var muteBuffer: AVAudioPCMBuffer?
     private var positionMarkerBuffer: AVAudioPCMBuffer?
-    private var transitionSilenceBuffer: AVAudioPCMBuffer?
     private var clickFrameCount: AVAudioFramePosition = 0
 
     private struct ScheduledStep: Sendable, Equatable {
@@ -71,9 +67,18 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         let emphasis: StepEmphasis
         let sampleTime: AVAudioFramePosition
         let beatStartSampleTime: AVAudioFramePosition
+        let framesPerBeat: AVAudioFramePosition
     }
 
-    init() {
+    init(
+        audioEngine: AVAudioEngine = AVAudioEngine(),
+        schedulingQueue: DispatchQueue = DispatchQueue(
+            label: "app.merodoa.PiTempo.metronome-scheduling",
+            qos: .userInteractive
+        )
+    ) {
+        self.audioEngine = audioEngine
+        self.schedulingQueue = schedulingQueue
         audioEngine.attach(playerNode)
         audioEngine.attach(positionPlayerNode)
     }
@@ -136,27 +141,27 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         accentPattern: AccentPattern,
         onFailure: @escaping FailureHandler
     ) {
-        schedulingQueue.async { [self] in
-            guard isRunning else { return }
+        performUpdate(onFailure: onFailure) { [self] in
+            try applyConfiguration(
+                bpm: bpm, timeSignature: timeSignature, subdivision: subdivision,
+                accentPattern: accentPattern, clickSettings: clickSettings
+            )
+        }
+    }
 
-            do {
-                try scheduleUpdatedConfiguration(
-                    bpm: bpm,
-                    timeSignature: timeSignature,
-                    subdivision: subdivision,
-                    accentPattern: accentPattern
-                )
-            } catch let error as MetronomeEngineError {
-                stopPlaybackImmediately()
-                DispatchQueue.main.async {
-                    onFailure(error)
-                }
-            } catch {
-                stopPlaybackImmediately()
-                DispatchQueue.main.async {
-                    onFailure(.startFailed(error.localizedDescription))
-                }
-            }
+    func updateConfiguration(
+        bpm: Int,
+        timeSignature: TimeSignature,
+        subdivision: Subdivision,
+        accentPattern: AccentPattern,
+        clickSettings: ClickSoundSettings,
+        onFailure: @escaping FailureHandler
+    ) {
+        performUpdate(onFailure: onFailure) { [self] in
+            try applyConfiguration(
+                bpm: bpm, timeSignature: timeSignature, subdivision: subdivision,
+                accentPattern: accentPattern, clickSettings: clickSettings
+            )
         }
     }
 
@@ -164,25 +169,55 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         _ settings: ClickSoundSettings,
         onFailure: @escaping FailureHandler
     ) {
-        schedulingQueue.async { [self] in
+        performUpdate(onFailure: onFailure) { [self] in
             guard isRunning else {
                 clickSettings = settings
                 return
             }
+            try applyConfiguration(
+                bpm: bpm, timeSignature: timeSignature, subdivision: subdivision,
+                accentPattern: accentPattern, clickSettings: settings
+            )
+        }
+    }
 
+    private func performUpdate(
+        onFailure: @escaping FailureHandler,
+        operation: @escaping @Sendable () throws -> Void
+    ) {
+        schedulingQueue.async { [self] in
             do {
-                try applyClickSettings(settings)
+                try operation()
             } catch let error as MetronomeEngineError {
                 stopPlaybackImmediately()
-                DispatchQueue.main.async {
-                    onFailure(error)
-                }
+                DispatchQueue.main.async { onFailure(error) }
             } catch {
                 stopPlaybackImmediately()
-                DispatchQueue.main.async {
-                    onFailure(.startFailed(error.localizedDescription))
-                }
+                DispatchQueue.main.async { onFailure(.startFailed(error.localizedDescription)) }
             }
+        }
+    }
+
+    private func applyConfiguration(
+        bpm: Int,
+        timeSignature: TimeSignature,
+        subdivision: Subdivision,
+        accentPattern: AccentPattern,
+        clickSettings: ClickSoundSettings
+    ) throws {
+        guard isRunning else { return }
+        let timingChanged = self.bpm != bpm || self.timeSignature != timeSignature
+            || self.subdivision != subdivision || self.accentPattern != accentPattern
+        guard timingChanged || self.clickSettings != clickSettings else { return }
+
+        // 波形生成も予約の差し替えも同じ直列キューで行う。描画・レンダー処理とは独立する。
+        let previousClickFrameCount = clickFrameCount
+        let waveformChanged = try applyClickSettings(clickSettings)
+        if timingChanged || waveformChanged {
+            try scheduleUpdatedConfiguration(
+                bpm: bpm, timeSignature: timeSignature, subdivision: subdivision,
+                accentPattern: accentPattern, previousClickFrameCount: previousClickFrameCount
+            )
         }
     }
 
@@ -291,30 +326,35 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         bpm: Int,
         timeSignature: TimeSignature,
         subdivision: Subdivision,
-        accentPattern: AccentPattern
+        accentPattern: AccentPattern,
+        previousClickFrameCount: AVAudioFramePosition
     ) throws {
-        guard let nodeTime = playerNode.lastRenderTime,
-              let playerTime = playerNode.playerTime(forNodeTime: nodeTime) else {
+        let playerTime: AVAudioTime? = playerNode.lastRenderTime.flatMap { nodeTime in
+            guard nodeTime.isSampleTimeValid, nodeTime.sampleRate > 0 else { return nil }
+            return playerNode.playerTime(forNodeTime: nodeTime)
+        }
+        // Start直後は、最初のレンダー時刻がまだ届いていないことがある。
+        // 未発音の初期予約だけを時刻0で置き換え、停止や再Startは行わない。
+        guard playerTime != nil || (
+            playerNode.isPlaying && lastCompletedStep == nil && timelineOriginSampleTime == 0
+        ) else {
             throw MetronomeEngineError.audioFormatUnavailable
         }
-
-        let currentSampleTime = playerTime.sampleTime
-        let currentStep = currentStep(at: currentSampleTime)
+        let currentSampleTime = playerTime?.sampleTime ?? 0
+        let protectedSampleTime = playerTime == nil ? 0 : currentSampleTime + schedulingLeadFrameCount
+        // 直近のレンダー区間で発音する音も保護し、二重発音を避ける。
+        let currentStep = playerTime.flatMap { _ in self.currentStep(at: protectedSampleTime) }
         let nextIndex = currentStep.map {
             MetronomeTiming.nextBeatIndex(after: $0.beatIndex, timeSignature: timeSignature)
         } ?? 0
-        let newFramesPerBeat = AVAudioFramePosition(
-            MetronomeTiming.samplesPerBeat(bpm: bpm, sampleRate: sampleRate).rounded()
-        )
-        let intendedNextBeatTime = currentStep.map { $0.beatStartSampleTime + newFramesPerBeat }
-            ?? currentSampleTime + newFramesPerBeat
+        // 現在の拍を最後まで再生し、次の拍境界から新しい設定へ切り替える。
+        // 各ステップに元の拍長を保持するため、境界前の連続変更でも位置がずれない。
+        let intendedNextBeatTime = currentStep.map { $0.beatStartSampleTime + $0.framesPerBeat }
+            ?? protectedSampleTime
         let currentClickEndTime = currentStep.map {
-            $0.emphasis.isAudible ? $0.sampleTime + clickFrameCount : currentSampleTime
+            $0.emphasis.isAudible ? $0.sampleTime + previousClickFrameCount : currentSampleTime
         } ?? currentSampleTime
-        let clearTime = max(
-            currentSampleTime + schedulingLeadFrameCount,
-            currentClickEndTime
-        )
+        let clearTime = max(protectedSampleTime, currentClickEndTime)
         let firstNewBeatTime = max(intendedNextBeatTime, clearTime)
 
         generation += 1
@@ -326,30 +366,14 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         nextSubdivisionIndexInBeat = 0
         nextGlobalSubdivisionIndex = 0
         timelineOriginSampleTime = firstNewBeatTime
-        scheduledSteps.removeAll(keepingCapacity: true)
+        scheduledSteps.removeAll {
+            $0.sampleTime <= currentSampleTime || $0.sampleTime >= firstNewBeatTime
+        }
         lastCompletedStep = currentStep
 
-        let silenceFrameCount = firstNewBeatTime - clearTime
-        if silenceFrameCount > 0 {
-            let silenceBuffer = try makeSilenceBuffer(frameCount: silenceFrameCount)
-            transitionSilenceBuffer = silenceBuffer
-            playerNode.scheduleBuffer(
-                silenceBuffer,
-                at: AVAudioTime(sampleTime: clearTime, atRate: sampleRate),
-                options: .interrupts
-            )
-            try interruptPositionMarkers(at: clearTime)
-            try scheduleSteps(
-                count: lookAheadStepCount,
-                firstBufferOptions: []
-            )
-        } else {
-            transitionSilenceBuffer = nil
-            try scheduleSteps(
-                count: lookAheadStepCount,
-                firstBufferOptions: .interrupts
-            )
-        }
+        // .interruptsを将来の拍境界に置くと、その時刻までの予約は再生される。
+        // 先に無音で割り込むと、現在の拍に残る細分音符を消してしまう。
+        try scheduleSteps(count: lookAheadStepCount, firstBufferOptions: .interrupts)
     }
 
     private func ensureAudioReady(clickSettings: ClickSoundSettings) throws {
@@ -423,7 +447,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         }
     }
 
-    private func applyClickSettings(_ settings: ClickSoundSettings) throws {
+    private func applyClickSettings(_ settings: ClickSoundSettings) throws -> Bool {
         let waveformChanged = settings.normalFrequency != clickSettings.normalFrequency
             || settings.accentFrequency != clickSettings.accentFrequency
             || settings.soundType != clickSettings.soundType
@@ -447,20 +471,13 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             normalClickBuffer = newNormalBuffer
             accentClickBuffer = newAccentBuffer
             clickFrameCount = AVAudioFramePosition(newNormalBuffer.frameLength)
-            preparedClickSettings = settings
         }
 
+        preparedClickSettings = settings
         clickSettings = settings
         playerNode.volume = Float(settings.volume)
 
-        if waveformChanged {
-            try scheduleUpdatedConfiguration(
-                bpm: bpm,
-                timeSignature: timeSignature,
-                subdivision: subdivision,
-                accentPattern: accentPattern
-            )
-        }
+        return waveformChanged
     }
 
     private func scheduleSteps(
@@ -497,7 +514,10 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                 stepIndex: patternIndex,
                 emphasis: emphasis,
                 sampleTime: sampleTime,
-                beatStartSampleTime: beatStartSampleTime
+                beatStartSampleTime: beatStartSampleTime,
+                framesPerBeat: AVAudioFramePosition(
+                    MetronomeTiming.samplesPerBeat(bpm: bpm, sampleRate: sampleRate).rounded()
+                )
             )
             let buffer: AVAudioPCMBuffer = switch emphasis {
             case .accent: accentClickBuffer
@@ -554,7 +574,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     private func stepDidComplete(_ step: ScheduledStep, generation: Int) {
         guard isRunning, self.generation == generation else { return }
 
-        scheduledSteps.removeAll { $0 == step }
+        scheduledSteps.removeAll { $0.sampleTime <= step.sampleTime }
         lastCompletedStep = step
 
         do {
@@ -599,38 +619,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         return buffer
     }
 
-    private func interruptPositionMarkers(
-        at sampleTime: AVAudioFramePosition
-    ) throws {
-        guard let positionMarkerBuffer else {
-            throw MetronomeEngineError.audioFormatUnavailable
-        }
-        positionPlayerNode.scheduleBuffer(
-            positionMarkerBuffer,
-            at: AVAudioTime(sampleTime: sampleTime, atRate: sampleRate),
-            options: .interrupts
-        )
-    }
-
-    private func makeSilenceBuffer(
-        frameCount: AVAudioFramePosition
-    ) throws -> AVAudioPCMBuffer {
-        guard frameCount > 0,
-              frameCount <= AVAudioFramePosition(UInt32.max),
-              let format = normalClickBuffer?.format,
-              let buffer = AVAudioPCMBuffer(
-                pcmFormat: format,
-                frameCapacity: AVAudioFrameCount(frameCount)
-              ),
-              let samples = buffer.floatChannelData?[0] else {
-            throw MetronomeEngineError.audioFormatUnavailable
-        }
-
-        buffer.frameLength = AVAudioFrameCount(frameCount)
-        samples.initialize(repeating: 0, count: Int(frameCount))
-        return buffer
-    }
-
     private func stopPlaybackImmediately() {
         isRunning = false
         isPreviewing = false
@@ -641,7 +629,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         positionPlayerNode.reset()
         scheduledSteps.removeAll(keepingCapacity: true)
         lastCompletedStep = nil
-        transitionSilenceBuffer = nil
         positionReporter.end()
     }
 }
@@ -667,6 +654,15 @@ nonisolated protocol MetronomeEngineProtocol: Sendable {
         timeSignature: TimeSignature,
         subdivision: Subdivision,
         accentPattern: AccentPattern,
+        onFailure: @escaping MetronomeEngine.FailureHandler
+    )
+
+    func updateConfiguration(
+        bpm: Int,
+        timeSignature: TimeSignature,
+        subdivision: Subdivision,
+        accentPattern: AccentPattern,
+        clickSettings: ClickSoundSettings,
         onFailure: @escaping MetronomeEngine.FailureHandler
     )
 

@@ -6,6 +6,7 @@ struct MetronomeView: View {
     @State private var isShowingClickSettings = false
     @State private var isShowingPatternEditor = false
     @State private var isShowingTempoDetector = false
+    @State private var isShowingPresets = false
 #if os(iOS)
     @State private var isShowingBPMInput = false
     @State private var bpmDraft = BPMNumericDraft(bpm: 120)
@@ -30,6 +31,7 @@ struct MetronomeView: View {
 
                 VStack(spacing: contentSpacing) {
                     MetronomeTopBar(
+                        onOpenPresets: { isShowingPresets = true },
                         onOpenTempoDetector: { isShowingTempoDetector = true },
                         onOpenSettings: { isShowingClickSettings = true }
                     )
@@ -104,6 +106,9 @@ struct MetronomeView: View {
             }
         } message: {
             Text(viewModel.audioErrorMessage ?? String(localized: "不明なエラーが発生しました。"))
+        }
+        .sheet(isPresented: $isShowingPresets) {
+            PresetListView(viewModel: viewModel)
         }
         .sheet(isPresented: $isShowingClickSettings) {
             ClickSoundSettingsView(viewModel: viewModel)

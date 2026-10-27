@@ -15,6 +15,9 @@ final class PlaybackPositionState: ObservableObject {
 final class MetronomeViewModel: ObservableObject {
     static let bpmRange = AppSettings.bpmRange
 
+    @Published private(set) var presets: [MetronomePreset] = []
+    @Published private(set) var lastAppliedPresetID: UUID?
+    @Published private(set) var presetErrorMessage: String?
     @Published private(set) var bpm: Int
     @Published private(set) var isRunning = false
     @Published private(set) var audioErrorMessage: String?
@@ -24,7 +27,7 @@ final class MetronomeViewModel: ObservableObject {
     @Published private(set) var accentPatterns: AccentPatternLibrary
     @Published var selectedTimeSignature: TimeSignature {
         didSet {
-            guard selectedTimeSignature != oldValue else { return }
+            guard selectedTimeSignature != oldValue, !isApplyingPreset else { return }
             persistSettings()
             updateEngineIfRunning()
         }
@@ -33,6 +36,8 @@ final class MetronomeViewModel: ObservableObject {
     private var tapTempoCalculator = TapTempoCalculator(bpmRange: bpmRange)
     private let metronomeEngine: any MetronomeEngineProtocol
     private let settingsStore: any SettingsStoring
+    private let presetStore: any PresetStoring
+    private var isApplyingPreset = false
     private let screenAwakeController: any ScreenAwakeControlling
     private var playbackRequestID = 0
     let playbackPositionState = PlaybackPositionState()
@@ -51,11 +56,13 @@ final class MetronomeViewModel: ObservableObject {
     init(
         metronomeEngine: any MetronomeEngineProtocol = MetronomeEngine(),
         settingsStore: any SettingsStoring = SettingsStore(),
+        presetStore: any PresetStoring = PresetStore(),
         screenAwakeController: (any ScreenAwakeControlling)? = nil
     ) {
         let settings = settingsStore.load()
         self.metronomeEngine = metronomeEngine
         self.settingsStore = settingsStore
+        self.presetStore = presetStore
         self.screenAwakeController = screenAwakeController ?? ScreenAwakeController()
         bpm = settings.bpm
         selectedTimeSignature = settings.timeSignature
@@ -65,6 +72,158 @@ final class MetronomeViewModel: ObservableObject {
         accentPatterns = settings.accentPatterns
         self.screenAwakeController.setPreventSleep(false)
         metronomeEngine.prepare(clickSettings: settings.clickSoundSettings)
+        loadPresets()
+    }
+
+    var currentConfiguration: PresetConfiguration {
+        PresetConfiguration(
+            bpm: bpm,
+            timeSignature: selectedTimeSignature,
+            subdivision: selectedSubdivision,
+            accentPattern: currentAccentPattern,
+            clickSoundSettings: clickSoundSettings
+        )
+    }
+
+    var isAppliedPresetModified: Bool {
+        guard let preset = presets.first(where: { $0.id == lastAppliedPresetID }) else { return false }
+        return preset.configuration != currentConfiguration
+    }
+
+    func loadPresets() {
+        do {
+            let result = try presetStore.load()
+            presets = result.presets
+            presetErrorMessage = result.skippedRecordCount > 0
+                ? String(localized: "一部のプリセットを読み込めませんでした。読み込めたプリセットを表示しています。")
+                : nil
+        } catch {
+            presetErrorMessage = error.localizedDescription
+        }
+    }
+
+    func dismissPresetError() {
+        presetErrorMessage = nil
+    }
+
+    @discardableResult
+    func createPreset(name: String) -> Bool {
+        do {
+            let preset = try MetronomePreset(name: name, configuration: currentConfiguration)
+            guard savePresets(presets + [preset]) else { return false }
+            lastAppliedPresetID = preset.id
+            return true
+        } catch {
+            presetErrorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
+    func applyPreset(id: UUID) -> Bool {
+        guard let preset = presets.first(where: { $0.id == id }) else {
+            presetErrorMessage = PresetError.notFound.localizedDescription
+            return false
+        }
+        let configuration = preset.configuration
+        let previous = currentConfiguration
+        lastAppliedPresetID = id
+        guard previous != configuration else { return true }
+
+        // 拍子のdidSetから個別更新を送らず、全設定を反映した後に一度だけ保存・通知する。
+        isApplyingPreset = true
+        bpm = configuration.bpm
+        selectedTimeSignature = configuration.timeSignature
+        selectedSubdivision = configuration.subdivision
+        accentPatterns.setPattern(configuration.accentPattern)
+        clickSoundSettings = configuration.clickSoundSettings
+        isApplyingPreset = false
+        if previous.timeSignature != configuration.timeSignature
+            || previous.subdivision != configuration.subdivision {
+            playbackPositionState.update(nil)
+        }
+        persistSettings()
+
+        if isRunning {
+            let requestID = playbackRequestID
+            metronomeEngine.updateConfiguration(
+                bpm: bpm,
+                timeSignature: selectedTimeSignature,
+                subdivision: selectedSubdivision,
+                accentPattern: currentAccentPattern,
+                clickSettings: clickSoundSettings
+            ) { [weak self] error in
+                guard let self, playbackRequestID == requestID else { return }
+                setRunning(false)
+                audioErrorMessage = error.localizedDescription
+            }
+        } else if previous.clickSoundSettings != clickSoundSettings {
+            metronomeEngine.prepare(clickSettings: clickSoundSettings)
+        }
+        return true
+    }
+
+    @discardableResult
+    func renamePreset(id: UUID, name: String) -> Bool {
+        guard let index = presets.firstIndex(where: { $0.id == id }) else {
+            presetErrorMessage = PresetError.notFound.localizedDescription
+            return false
+        }
+        var updated = presets
+        do {
+            try updated[index].rename(name)
+            return savePresets(updated)
+        } catch {
+            presetErrorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
+    func overwritePreset(id: UUID) -> Bool {
+        guard let index = presets.firstIndex(where: { $0.id == id }) else {
+            presetErrorMessage = PresetError.notFound.localizedDescription
+            return false
+        }
+        var updated = presets
+        updated[index].configuration = currentConfiguration
+        updated[index].updatedAt = Date()
+        return savePresets(updated)
+    }
+
+    @discardableResult
+    func deletePreset(id: UUID) -> Bool {
+        guard presets.contains(where: { $0.id == id }) else {
+            presetErrorMessage = PresetError.notFound.localizedDescription
+            return false
+        }
+        guard savePresets(presets.filter { $0.id != id }) else { return false }
+        if lastAppliedPresetID == id { lastAppliedPresetID = nil }
+        return true
+    }
+
+    @discardableResult
+    func movePresets(from offsets: IndexSet, to destination: Int) -> Bool {
+        guard !offsets.isEmpty, offsets.allSatisfy({ presets.indices.contains($0) }),
+              (0...presets.count).contains(destination) else { return false }
+        let moving = offsets.map { presets[$0] }
+        var updated = presets.enumerated().filter { !offsets.contains($0.offset) }.map(\.element)
+        let insertion = destination - offsets.filter { $0 < destination }.count
+        updated.insert(contentsOf: moving, at: insertion)
+        guard updated != presets else { return true }
+        return savePresets(updated)
+    }
+
+    private func savePresets(_ updated: [MetronomePreset]) -> Bool {
+        do {
+            try presetStore.save(updated)
+            presets = updated
+            presetErrorMessage = nil
+            return true
+        } catch {
+            presetErrorMessage = error.localizedDescription
+            return false
+        }
     }
 
     func adjustBPM(by amount: Int) {
@@ -95,6 +254,9 @@ final class MetronomeViewModel: ObservableObject {
                 guard let self,
                       playbackRequestID == requestID,
                       isRunning else { return }
+                if let position,
+                   position.timeSignature != selectedTimeSignature
+                    || position.subdivision != selectedSubdivision { return }
                 playbackPositionState.update(position)
             }
         ) { [weak self] result in
