@@ -25,8 +25,8 @@
 		B2000001305905780006511B /* Exceptions for "TempoLab" folder in "TempoLab" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Info.plist,
 				"Info-macOS.plist",
+				Info.plist,
 			);
 			target = A204CA0E305905780006511B /* TempoLab */;
 		};
@@ -145,9 +145,13 @@
 					A204CA0E305905780006511B = {
 						CreatedOnToolsVersion = 26.6;
 						SystemCapabilities = {
-							com.apple.iCloud = { enabled = 1; };
-							com.apple.Push = { enabled = 1; };
 							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+							com.apple.Push = {
+								enabled = 1;
+							};
+							com.apple.iCloud = {
 								enabled = 1;
 							};
 						};
@@ -346,12 +350,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APS_ENVIRONMENT = development;
-				CLOUDKIT_ENVIRONMENT = Development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = TempoLab/TempoLab.entitlements;
+				CLOUDKIT_ENVIRONMENT = Development;
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "TempoLab/TempoLab-iOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "TempoLab/TempoLab-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = TempoLab/TempoLab.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -363,9 +367,9 @@
 				"EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]" = LaunchScreen.storyboard;
 				"EXCLUDED_SOURCE_FILE_NAMES[sdk=xr*]" = LaunchScreen.storyboard;
 				GENERATE_INFOPLIST_FILE = YES;
-				"INFOPLIST_FILE[sdk=macosx*]" = "TempoLab/Info-macOS.plist";
 				"INFOPLIST_FILE[sdk=iphoneos*]" = TempoLab/Info.plist;
 				"INFOPLIST_FILE[sdk=iphonesimulator*]" = TempoLab/Info.plist;
+				"INFOPLIST_FILE[sdk=macosx*]" = "TempoLab/Info-macOS.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Pi:Tempo";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access is needed to analyze the tempo of your performance.";
@@ -407,12 +411,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APS_ENVIRONMENT = production;
-				CLOUDKIT_ENVIRONMENT = Production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = TempoLab/TempoLab.entitlements;
+				CLOUDKIT_ENVIRONMENT = Production;
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "TempoLab/TempoLab-iOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "TempoLab/TempoLab-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = TempoLab/TempoLab.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -424,9 +428,9 @@
 				"EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]" = LaunchScreen.storyboard;
 				"EXCLUDED_SOURCE_FILE_NAMES[sdk=xr*]" = LaunchScreen.storyboard;
 				GENERATE_INFOPLIST_FILE = YES;
-				"INFOPLIST_FILE[sdk=macosx*]" = "TempoLab/Info-macOS.plist";
 				"INFOPLIST_FILE[sdk=iphoneos*]" = TempoLab/Info.plist;
 				"INFOPLIST_FILE[sdk=iphonesimulator*]" = TempoLab/Info.plist;
+				"INFOPLIST_FILE[sdk=macosx*]" = "TempoLab/Info-macOS.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Pi:Tempo";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access is needed to analyze the tempo of your performance.";
