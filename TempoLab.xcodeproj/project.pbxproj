@@ -356,7 +356,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "TempoLab/TempoLab-iOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "TempoLab/TempoLab-iOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = TempoLab/TempoLab.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
@@ -392,6 +392,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = app.merodoa.PiTempo;
 				PRODUCT_MODULE_NAME = TempoLab;
 				PRODUCT_NAME = PiTempo;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -417,7 +418,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "TempoLab/TempoLab-iOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "TempoLab/TempoLab-iOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = TempoLab/TempoLab.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
@@ -453,6 +454,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = app.merodoa.PiTempo;
 				PRODUCT_MODULE_NAME = TempoLab;
 				PRODUCT_NAME = PiTempo;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
