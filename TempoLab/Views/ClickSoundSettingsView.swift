@@ -43,6 +43,9 @@ struct ClickSoundSettingsView: View {
                 MacSettingsCard(title: String(localized: "プレビュー"), systemImage: "play.circle") {
                     previewControls
                 }
+
+                developerLink
+                    .padding(14)
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
@@ -79,8 +82,27 @@ struct ClickSoundSettingsView: View {
             Section("プレビュー") {
                 previewControls
             }
+
+            Section {
+                developerLink
+            }
         }
         #endif
+    }
+
+    @ViewBuilder
+    private var developerLink: some View {
+        if let url = URL(string: "https://www.taro252.workers.dev/") {
+            Link(destination: url) {
+                HStack {
+                    Text("デベロッパー")
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .accessibilityHidden(true)
+                }
+                .contentShape(Rectangle())
+            }
+        }
     }
 
     private var soundTypePicker: some View {

@@ -28,6 +28,7 @@
 "Done" = "Done";
 
 /* Settings */
+"デベロッパー" = "Developer";
 "完了" = "Done";
 "一般" = "General";
 "再生中は画面をスリープしない" = "Keep Screen Awake While Playing";
