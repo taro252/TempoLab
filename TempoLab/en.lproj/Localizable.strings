@@ -135,3 +135,18 @@
 "このバージョンでは読み込めないプリセットです。保存データは保持されています。" = "This preset format is not supported by this version. The saved data has been preserved.";
 "プリセットを保存できませんでした。" = "Presets could not be saved.";
 "一部のプリセットを読み込めませんでした。読み込めたプリセットを表示しています。" = "Some presets could not be loaded. Recovered presets are shown.";
+
+/* Preset iCloud sync */
+"iCloud同期待ち" = "Waiting for iCloud Sync";
+"iCloud同期中" = "Syncing with iCloud";
+"iCloud同期済み" = "Synced with iCloud";
+"iCloud利用不可" = "iCloud Unavailable";
+"同期エラー" = "Sync Error";
+"今すぐ同期" = "Sync Now";
+"最終同期" = "Last Sync";
+"iCloud同期にはCloudKit対応の署名と実機が必要です。ローカル保存は利用できます。" = "iCloud sync requires a physical device and CloudKit-enabled signing. Local presets remain available.";
+"iCloudに接続できません。ローカル保存は利用できます。" = "iCloud is unavailable. Local presets remain available.";
+"iCloudアカウントの確認が必要です。ローカルの変更は保持されています。" = "Your iCloud account needs to be verified. Local changes are preserved.";
+"iCloudのプリセットを読み込めませんでした。ローカルの変更は保持されています。" = "iCloud presets could not be read. Local changes are preserved.";
+"同期リビジョンを更新できませんでした。" = "The sync revision could not be updated.";
+"iCloud同期の構成を確認してください。ローカル保存は利用できます。" = "Check the iCloud sync configuration. Local presets remain available.";

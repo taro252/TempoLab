@@ -148,6 +148,19 @@ final class PresetRepositoryTests: XCTestCase {
         }
     }
 
+    func testLastConfirmedSyncDateSurvivesRestart() throws {
+        let metadata = SyncTestMetadataStore()
+        let repository = PresetRepository(legacyStore: SyncTestLegacyStore(), metadataStore: metadata)
+        let scope = try repository.activateAccount("A")
+        try repository.finishInitialFetch(scope: scope)
+        let date = Date(timeIntervalSince1970: 500)
+        try repository.confirmSync(scope: scope, date: date)
+        let restored = PresetRepository(legacyStore: SyncTestLegacyStore(), metadataStore: metadata)
+        XCTAssertEqual(restored.lastSyncDate, date)
+        try restored.useSignedOutPartition()
+        XCTAssertNil(restored.lastSyncDate)
+    }
+
     private func futureDocument() -> PresetSyncDocument {
         var document = PresetSyncDocument()
         document.schemaVersion = 999

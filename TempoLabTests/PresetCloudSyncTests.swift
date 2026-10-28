@@ -4,6 +4,13 @@ import XCTest
 @testable import TempoLab
 
 final class PresetCloudSyncTests: XCTestCase {
+    func testAccountNamespaceUsesTheBuiltCloudKitEnvironment() throws {
+        let environment = try XCTUnwrap(Bundle.main.object(forInfoDictionaryKey: "PresetCloudKitEnvironment") as? String)
+        XCTAssertTrue(["Development", "Production"].contains(environment))
+        let key = try PresetCloudRecord.accountKey(for: CKRecord.ID(recordName: "test-user"))
+        XCTAssertEqual(key, "iCloud.app.merodoa.PiTempo|\(environment)|test-user")
+    }
+
     func testCloudRecordRoundTripIncludesBodyRevisionTombstoneAndOrder() throws {
         let preset = try syncPreset("日本語の練習", bpm: 180)
         var deleted = syncRecord(preset, counter: 37)

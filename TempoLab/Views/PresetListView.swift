@@ -10,6 +10,7 @@ struct PresetListView: View {
     var body: some View {
         NavigationStack {
             List {
+                PresetSyncStatusView(status: viewModel.presetSyncStatus, onSync: viewModel.syncPresets)
                 Section {
                     Button {
                         nameRequest = PresetNameRequest(

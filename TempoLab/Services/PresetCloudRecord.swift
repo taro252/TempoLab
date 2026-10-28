@@ -5,6 +5,14 @@ import Foundation
 nonisolated enum PresetCloudRecord: Equatable, Sendable {
     static let containerIdentifier = "iCloud.app.merodoa.PiTempo"
     static let zoneID = CKRecordZone.ID(zoneName: "TempoPresets")
+    static func accountKey(for user: CKRecord.ID) throws -> String {
+        guard let environment = Bundle.main.object(forInfoDictionaryKey: "PresetCloudKitEnvironment") as? String,
+              ["Development", "Production"].contains(environment) else {
+            throw PresetSyncError.invalidConfiguration
+        }
+        return containerIdentifier + "|" + environment + "|" + user.recordName
+    }
+
     case preset(PresetSyncRecord)
     case order(PresetOrderRecord)
 

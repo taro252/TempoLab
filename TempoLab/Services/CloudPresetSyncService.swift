@@ -1,5 +1,6 @@
 import CloudKit
 import Foundation
+import Network
 #if os(macOS)
 import Security
 #endif
@@ -18,6 +19,10 @@ actor CloudPresetSyncService: PresetSyncing, CKSyncEngineDelegate {
     private var cycleFailed = false
     private var fetchedSuccessfully = false
     private var accountGeneration = 0
+    private let networkMonitor = NWPathMonitor()
+    private var lastNetworkStatus: NWPath.Status?
+    private var bootstrapRetry: Task<Void, Never>?
+    private var bootstrapRetrySeconds = 5
 
     init(repository: PresetRepository) {
         self.repository = repository
@@ -33,11 +38,11 @@ actor CloudPresetSyncService: PresetSyncing, CKSyncEngineDelegate {
                 Task { await self.refresh() }
             }
         }
-        installObservers()
         guard Self.hasCloudKitEntitlement else {
             await report(.unavailable, message: String(localized: "iCloud同期にはCloudKit対応の署名と実機が必要です。ローカル保存は利用できます。"))
             return
         }
+        installObservers()
         do {
             let container = self.container ?? CKContainer(identifier: PresetCloudRecord.containerIdentifier)
             self.container = container
@@ -48,14 +53,16 @@ actor CloudPresetSyncService: PresetSyncing, CKSyncEngineDelegate {
                 invalidateEngine()
                 if status == .noAccount { try repository.useSignedOutPartition() }
                 await report(.unavailable, message: String(localized: "iCloudに接続できません。ローカル保存は利用できます。"))
+                if status != .noAccount && status != .restricted { scheduleBootstrapRetry() }
                 return
             }
             let user = try await container.userRecordID()
             guard verificationGeneration == accountGeneration else { refreshRequested = true; return }
-            let newScope = "account:" + user.recordName
+            let accountKey = try PresetCloudRecord.accountKey(for: user)
+            let newScope = "account:" + accountKey
             if scope != newScope || engine == nil {
                 invalidateEngine()
-                scope = try repository.activateAccount(user.recordName)
+                scope = try repository.activateAccount(accountKey)
                 let partition = try repository.partition(scope: newScope)
                 let serialization = try partition.engineState.map {
                     try JSONDecoder().decode(CKSyncEngine.State.Serialization.self, from: $0)
@@ -65,6 +72,9 @@ actor CloudPresetSyncService: PresetSyncing, CKSyncEngineDelegate {
                 )
                 engine = CKSyncEngine(configuration)
             }
+            bootstrapRetry?.cancel()
+            bootstrapRetry = nil
+            bootstrapRetrySeconds = 5
             guard let engine, let scope else { return }
             cycleFailed = false
             fetchError = nil
@@ -80,11 +90,47 @@ actor CloudPresetSyncService: PresetSyncing, CKSyncEngineDelegate {
             try await confirmIfComplete(scope: scope)
         } catch {
             await report(.failed, message: error.localizedDescription)
+            if engine == nil, let error = error as? CKError {
+                switch error.code {
+                case .networkFailure, .networkUnavailable, .serviceUnavailable, .accountTemporarilyUnavailable, .requestRateLimited:
+                    scheduleBootstrapRetry(after: error.retryAfterSeconds)
+                default: break
+                }
+            }
+        }
+    }
+
+    private func scheduleBootstrapRetry(after serverDelay: TimeInterval? = nil) {
+        guard bootstrapRetry == nil else { return }
+        let delay = max(Double(bootstrapRetrySeconds), serverDelay ?? 0)
+        bootstrapRetrySeconds = min(bootstrapRetrySeconds * 2, 60)
+        bootstrapRetry = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(delay)) } catch { return }
+            await self?.retryBootstrap()
+        }
+    }
+
+    private func retryBootstrap() async {
+        bootstrapRetry = nil
+        await refresh()
+    }
+
+    private func networkChanged(_ status: NWPath.Status) async {
+        let previous = lastNetworkStatus
+        lastNetworkStatus = status
+        if status == .satisfied, previous != nil, previous != .satisfied {
+            await refresh()
+        } else if status == .unsatisfied {
+            await report(.unavailable, message: String(localized: "iCloudに接続できません。ローカル保存は利用できます。"))
         }
     }
 
     private func installObservers() {
         guard observers.isEmpty else { return }
+        networkMonitor.pathUpdateHandler = { [weak self] path in
+            Task { await self?.networkChanged(path.status) }
+        }
+        networkMonitor.start(queue: DispatchQueue(label: "app.merodoa.PiTempo.preset-network", qos: .utility))
         observers.append(NotificationCenter.default.addObserver(
             forName: .CKAccountChanged, object: nil, queue: nil
         ) { [weak self] _ in
@@ -188,7 +234,8 @@ actor CloudPresetSyncService: PresetSyncing, CKSyncEngineDelegate {
                 case .signOut: currentUser = nil
                 @unknown default: currentUser = nil
                 }
-                if currentUser.map({ "account:" + $0.recordName }) != scope {
+                let currentAccount = try currentUser.map { "account:" + (try PresetCloudRecord.accountKey(for: $0)) }
+                if currentAccount != scope {
                     invalidateEngine()
                     if currentUser == nil { try repository.useSignedOutPartition() }
                     await report(.unavailable, message: String(localized: "iCloudアカウントの確認が必要です。ローカルの変更は保持されています。"))
@@ -310,7 +357,7 @@ actor CloudPresetSyncService: PresetSyncing, CKSyncEngineDelegate {
             let partition = expectedScope.flatMap { try? repository.partition(scope: $0) }
             let currentPhase: PresetSyncStatus.Phase = phase == .upToDate && partition?.pending.isEmpty != true ? .waiting : phase
             PresetSyncMonitor.shared.update(PresetSyncStatus(
-                phase: currentPhase, lastSyncDate: partition?.lastSyncDate, message: message
+                phase: currentPhase, lastSyncDate: partition?.lastSyncDate ?? repository.lastSyncDate, message: message
             ))
         }
     }

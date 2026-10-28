@@ -38,6 +38,15 @@ final class LocalizationTests: XCTestCase {
         }
     }
 
+    func testPresetSyncStatesAreLocalized() throws {
+        let english = try languageBundle("en")
+        let japanese = try languageBundle("ja")
+        for (key, value) in ["iCloud同期中": "Syncing with iCloud", "iCloud利用不可": "iCloud Unavailable", "同期エラー": "Sync Error", "今すぐ同期": "Sync Now", "最終同期": "Last Sync"] {
+            XCTAssertEqual(english.localizedString(forKey: key, value: nil, table: "Localizable"), value)
+            XCTAssertEqual(japanese.localizedString(forKey: key, value: nil, table: "Localizable"), key)
+        }
+    }
+
     private func languageBundle(_ language: String) throws -> Bundle {
         let path = try XCTUnwrap(Bundle.main.path(forResource: language, ofType: "lproj"))
         return try XCTUnwrap(Bundle(path: path))

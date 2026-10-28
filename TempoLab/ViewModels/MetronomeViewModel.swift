@@ -15,6 +15,7 @@ final class PlaybackPositionState: ObservableObject {
 final class MetronomeViewModel: ObservableObject {
     static let bpmRange = AppSettings.bpmRange
 
+    @Published private(set) var presetSyncStatus = PresetSyncStatus()
     @Published private(set) var presets: [MetronomePreset] = []
     @Published private(set) var lastAppliedPresetID: UUID?
     @Published private(set) var presetErrorMessage: String?
@@ -38,6 +39,8 @@ final class MetronomeViewModel: ObservableObject {
     private let settingsStore: any SettingsStoring
     private let presetStore: any PresetStoring
     private var isApplyingPreset = false
+    private let presetSyncService: any PresetSyncing
+    private var presetSubscriptions = Set<AnyCancellable>()
     private let screenAwakeController: any ScreenAwakeControlling
     private var playbackRequestID = 0
     let playbackPositionState = PlaybackPositionState()
@@ -56,13 +59,16 @@ final class MetronomeViewModel: ObservableObject {
     init(
         metronomeEngine: any MetronomeEngineProtocol = MetronomeEngine(),
         settingsStore: any SettingsStoring = SettingsStore(),
-        presetStore: any PresetStoring = PresetStore(),
+        presetStore: any PresetStoring = PresetRepository.shared,
+        presetSyncService: any PresetSyncing = CloudPresetSyncService.shared,
+        presetSyncMonitor: PresetSyncMonitor? = nil,
         screenAwakeController: (any ScreenAwakeControlling)? = nil
     ) {
         let settings = settingsStore.load()
         self.metronomeEngine = metronomeEngine
         self.settingsStore = settingsStore
         self.presetStore = presetStore
+        self.presetSyncService = presetSyncService
         self.screenAwakeController = screenAwakeController ?? ScreenAwakeController()
         bpm = settings.bpm
         selectedTimeSignature = settings.timeSignature
@@ -73,6 +79,19 @@ final class MetronomeViewModel: ObservableObject {
         self.screenAwakeController.setPreventSleep(false)
         metronomeEngine.prepare(clickSettings: settings.clickSoundSettings)
         loadPresets()
+        if let repository = presetStore as? PresetRepository {
+            NotificationCenter.default.publisher(for: .presetRepositoryDidChange, object: repository)
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in self?.loadPresets() }
+                .store(in: &presetSubscriptions)
+        }
+        (presetSyncMonitor ?? .shared).$status
+            .sink { [weak self] status in self?.presetSyncStatus = status }
+            .store(in: &presetSubscriptions)
+    }
+
+    func syncPresets() async {
+        await presetSyncService.refresh()
     }
 
     var currentConfiguration: PresetConfiguration {
@@ -93,11 +112,17 @@ final class MetronomeViewModel: ObservableObject {
     func loadPresets() {
         do {
             let result = try presetStore.load()
-            presets = result.presets
+            if presets != result.presets { presets = result.presets }
+            if let id = lastAppliedPresetID, !presets.contains(where: { $0.id == id }) {
+                lastAppliedPresetID = nil
+            }
             presetErrorMessage = result.skippedRecordCount > 0
                 ? String(localized: "一部のプリセットを読み込めませんでした。読み込めたプリセットを表示しています。")
                 : nil
         } catch {
+            if let repository = presetStore as? PresetRepository, presets.isEmpty {
+                presets = repository.migrationBackup
+            }
             presetErrorMessage = error.localizedDescription
         }
     }
@@ -110,7 +135,7 @@ final class MetronomeViewModel: ObservableObject {
     func createPreset(name: String) -> Bool {
         do {
             let preset = try MetronomePreset(name: name, configuration: currentConfiguration)
-            guard savePresets(presets + [preset]) else { return false }
+            guard mutatePresets(.insert(preset)) else { return false }
             lastAppliedPresetID = preset.id
             return true
         } catch {
@@ -165,39 +190,17 @@ final class MetronomeViewModel: ObservableObject {
 
     @discardableResult
     func renamePreset(id: UUID, name: String) -> Bool {
-        guard let index = presets.firstIndex(where: { $0.id == id }) else {
-            presetErrorMessage = PresetError.notFound.localizedDescription
-            return false
-        }
-        var updated = presets
-        do {
-            try updated[index].rename(name)
-            return savePresets(updated)
-        } catch {
-            presetErrorMessage = error.localizedDescription
-            return false
-        }
+        mutatePresets(.rename(id, name))
     }
 
     @discardableResult
     func overwritePreset(id: UUID) -> Bool {
-        guard let index = presets.firstIndex(where: { $0.id == id }) else {
-            presetErrorMessage = PresetError.notFound.localizedDescription
-            return false
-        }
-        var updated = presets
-        updated[index].configuration = currentConfiguration
-        updated[index].updatedAt = Date()
-        return savePresets(updated)
+        mutatePresets(.overwrite(id, currentConfiguration))
     }
 
     @discardableResult
     func deletePreset(id: UUID) -> Bool {
-        guard presets.contains(where: { $0.id == id }) else {
-            presetErrorMessage = PresetError.notFound.localizedDescription
-            return false
-        }
-        guard savePresets(presets.filter { $0.id != id }) else { return false }
+        guard mutatePresets(.delete(id)) else { return false }
         if lastAppliedPresetID == id { lastAppliedPresetID = nil }
         return true
     }
@@ -211,13 +214,12 @@ final class MetronomeViewModel: ObservableObject {
         let insertion = destination - offsets.filter { $0 < destination }.count
         updated.insert(contentsOf: moving, at: insertion)
         guard updated != presets else { return true }
-        return savePresets(updated)
+        return mutatePresets(.reorder(updated.map(\.id)))
     }
 
-    private func savePresets(_ updated: [MetronomePreset]) -> Bool {
+    private func mutatePresets(_ mutation: PresetMutation) -> Bool {
         do {
-            try presetStore.save(updated)
-            presets = updated
+            presets = try presetStore.apply(mutation)
             presetErrorMessage = nil
             return true
         } catch {

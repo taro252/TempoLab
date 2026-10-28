@@ -8,11 +8,13 @@ nonisolated extension Notification.Name {
 nonisolated enum PresetSyncError: Error, LocalizedError, Sendable {
     case accountChanged
     case invalidRecord
+    case invalidConfiguration
     case revisionOverflow
 
     var errorDescription: String? {
         switch self {
         case .accountChanged: String(localized: "iCloudアカウントの確認が必要です。ローカルの変更は保持されています。")
+        case .invalidConfiguration: String(localized: "iCloud同期の構成を確認してください。ローカル保存は利用できます。")
         case .invalidRecord: String(localized: "iCloudのプリセットを読み込めませんでした。ローカルの変更は保持されています。")
         case .revisionOverflow: String(localized: "同期リビジョンを更新できませんでした。")
         }
@@ -61,6 +63,7 @@ nonisolated final class PresetRepository: PresetStoring, @unchecked Sendable {
 
     /// 保存に失敗した移行元を画面で確認できる。書き込みは成功したように扱わない。
     var migrationBackup: [MetronomePreset] { lock.withLock { recoveryPresets } }
+    var lastSyncDate: Date? { lock.withLock { current.lastSyncDate } }
 
     func save(_ presets: [MetronomePreset]) throws {
         try transaction(localChange: true) { document in

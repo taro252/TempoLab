@@ -495,6 +495,85 @@ final class MetronomeViewModelTests: XCTestCase {
         ))
     }
 
+    func testCloudReceiveUpdatesListWithoutChangingPlaybackOrSettings() async throws {
+        let repository = PresetRepository(legacyStore: SyncTestLegacyStore(), metadataStore: SyncTestMetadataStore())
+        let engine = MetronomeEngineSpy()
+        let settings = InMemorySettingsStore()
+        let model = MetronomeViewModel(metronomeEngine: engine, settingsStore: settings, presetStore: repository)
+        model.toggleRunning()
+        let before = model.currentConfiguration
+        let remote = try syncPreset("他端末の変更", bpm: 300)
+        let changed = expectation(description: "受信一覧をMainActorへ反映")
+        let observation = model.$presets.dropFirst().sink { presets in
+            if presets.contains(where: { $0.id == remote.id }) { changed.fulfill() }
+        }
+        let scope = try repository.activateAccount("A")
+        try repository.merge(records: [syncRecord(remote)], scope: scope)
+        await fulfillment(of: [changed], timeout: 3)
+        withExtendedLifetime(observation) {}
+        XCTAssertEqual(model.currentConfiguration, before)
+        XCTAssertTrue(model.isRunning)
+        XCTAssertEqual(engine.starts.count, 1)
+        XCTAssertEqual(engine.stopCount, 0)
+        XCTAssertTrue(engine.configurationUpdates.isEmpty)
+        XCTAssertTrue(engine.updates.isEmpty)
+        XCTAssertTrue(engine.clickSettingsUpdates.isEmpty)
+        XCTAssertEqual(engine.preparedSettings.count, 1)
+        XCTAssertEqual(settings.saveCount, 0)
+    }
+
+    func testLocalMutationKeepsRemoteInsertBeforeUIReceivesNotification() throws {
+        let a = try syncPreset("A"), b = try syncPreset("B")
+        let repository = PresetRepository(legacyStore: SyncTestLegacyStore([a]), metadataStore: SyncTestMetadataStore())
+        let model = MetronomeViewModel(metronomeEngine: MetronomeEngineSpy(), settingsStore: InMemorySettingsStore(), presetStore: repository)
+        let scope = try repository.activateAccount("A")
+        try repository.merge(records: [syncRecord(b)], scope: scope)
+        // 一覧通知がまだMainActorに届いていなくても、操作はRepositoryの最新状態に対して行う。
+        XCTAssertEqual(model.presets.count, 1)
+        XCTAssertTrue(model.renamePreset(id: a.id, name: "A改名"))
+        XCTAssertEqual(Set(model.presets.map(\.id)), Set([a.id, b.id]))
+    }
+
+    func testCloudDeletionKeepsCurrentlyAppliedConfigurationAndPlayback() async throws {
+        let preset = try syncPreset("再生中", bpm: 180)
+        let repository = PresetRepository(legacyStore: SyncTestLegacyStore([preset]), metadataStore: SyncTestMetadataStore())
+        let engine = MetronomeEngineSpy()
+        let model = MetronomeViewModel(metronomeEngine: engine, settingsStore: InMemorySettingsStore(), presetStore: repository)
+        XCTAssertTrue(model.applyPreset(id: preset.id))
+        model.toggleRunning()
+        let changed = expectation(description: "削除を反映")
+        let observation = model.$presets.dropFirst().sink { if $0.isEmpty { changed.fulfill() } }
+        let scope = try repository.activateAccount("A")
+        var deletion = syncRecord(preset, counter: 50)
+        deletion.isDeleted = true
+        try repository.merge(records: [deletion], scope: scope)
+        await fulfillment(of: [changed], timeout: 3)
+        withExtendedLifetime(observation) {}
+        XCTAssertEqual(model.bpm, 180)
+        XCTAssertTrue(model.isRunning)
+        XCTAssertNil(model.lastAppliedPresetID)
+        XCTAssertEqual(engine.starts.count, 1)
+        XCTAssertEqual(engine.stopCount, 0)
+        XCTAssertTrue(engine.configurationUpdates.isEmpty)
+    }
+
+    func testSyncFailureStatusDoesNotBlockLocalPresetOperations() async {
+        let monitor = PresetSyncMonitor()
+        let service = PresetSyncServiceSpy()
+        let model = MetronomeViewModel(
+            metronomeEngine: MetronomeEngineSpy(), settingsStore: InMemorySettingsStore(),
+            presetStore: InMemoryPresetStore(), presetSyncService: service, presetSyncMonitor: monitor
+        )
+        monitor.update(PresetSyncStatus(phase: .failed, message: "通信エラー"))
+        XCTAssertEqual(model.presetSyncStatus.phase, .failed)
+        XCTAssertTrue(model.createPreset(name: "オフラインでも保存"))
+        XCTAssertEqual(model.presets.count, 1)
+        await model.syncPresets()
+        let count = await service.refreshCount
+        XCTAssertEqual(count, 1)
+        XCTAssertEqual(model.presetSyncStatus.phase, .failed)
+    }
+
     private func makeViewModel(
         engine: MetronomeEngineSpy,
         store: InMemorySettingsStore = InMemorySettingsStore(),
@@ -637,4 +716,9 @@ nonisolated private final class InMemoryPresetStore: PresetStoring, @unchecked S
         if failSave { throw PresetError.saveFailed }
         self.presets = presets
     }
+}
+
+private actor PresetSyncServiceSpy: PresetSyncing {
+    private(set) var refreshCount = 0
+    func refresh() async { refreshCount += 1 }
 }
