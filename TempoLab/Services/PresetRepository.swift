@@ -1,6 +1,7 @@
 import Foundation
 
 nonisolated extension Notification.Name {
+    static let presetRepositoryLocalChange = Notification.Name("PiTempo.presetRepositoryLocalChange")
     static let presetRepositoryDidChange = Notification.Name("PiTempo.presetRepositoryDidChange")
 }
 
@@ -62,7 +63,7 @@ nonisolated final class PresetRepository: PresetStoring, @unchecked Sendable {
     var migrationBackup: [MetronomePreset] { lock.withLock { recoveryPresets } }
 
     func save(_ presets: [MetronomePreset]) throws {
-        try transaction { document in
+        try transaction(localChange: true) { document in
             var partition = document.partitions[document.activeScope] ?? PresetSyncPartition()
             try Self.update(&partition, to: presets, writerID: document.writerID)
             document.partitions[document.activeScope] = partition
@@ -70,7 +71,7 @@ nonisolated final class PresetRepository: PresetStoring, @unchecked Sendable {
     }
 
     func apply(_ mutation: PresetMutation) throws -> [MetronomePreset] {
-        try transaction { document in
+        try transaction(localChange: true) { document in
             var partition = document.partitions[document.activeScope] ?? PresetSyncPartition()
             var presets = partition.presets
             try mutation.apply(to: &presets)
@@ -211,7 +212,7 @@ nonisolated final class PresetRepository: PresetStoring, @unchecked Sendable {
         }
     }
 
-    private func transaction<T>(_ change: (inout PresetSyncDocument) throws -> T) throws -> T {
+    private func transaction<T>(localChange: Bool = false, _ change: (inout PresetSyncDocument) throws -> T) throws -> T {
         let result = try lock.withLock {
             if let loadError { throw loadError }
             var candidate = document
@@ -223,6 +224,7 @@ nonisolated final class PresetRepository: PresetStoring, @unchecked Sendable {
             return result
         }
         NotificationCenter.default.post(name: .presetRepositoryDidChange, object: self)
+        if localChange { NotificationCenter.default.post(name: .presetRepositoryLocalChange, object: self) }
         return result
     }
 
