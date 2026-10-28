@@ -8,6 +8,16 @@ nonisolated struct PresetLoadResult: Sendable {
 nonisolated protocol PresetStoring: Sendable {
     func load() throws -> PresetLoadResult
     func save(_ presets: [MetronomePreset]) throws
+    func apply(_ mutation: PresetMutation) throws -> [MetronomePreset]
+}
+
+nonisolated extension PresetStoring {
+    func apply(_ mutation: PresetMutation) throws -> [MetronomePreset] {
+        var presets = try load().presets
+        try mutation.apply(to: &presets)
+        try save(presets)
+        return presets
+    }
 }
 
 nonisolated final class PresetStore: PresetStoring, @unchecked Sendable {
